@@ -37,9 +37,11 @@ const PartnersPage = () => {
                     Expanda seu negócio e alcance novos clientes através da nossa plataforma líder em serviços de frete.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4">
-                    <Button size="lg" className="gap-2">
-                      Seja Parceiro
-                      <ArrowRight className="h-4 w-4" />
+                    <Button size="lg" className="gap-2" asChild>
+                      <Link href="/driver/register">
+                        Seja Parceiro
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
                     </Button>
                     <Button size="lg" variant="outline">
                       Saber mais
@@ -274,9 +276,11 @@ const PartnersPage = () => {
                 Junte-se a milhares de parceiros que já estão crescendo com o FreteJá.
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <Button size="lg" variant="secondary" className="gap-2">
-                  Cadastre-se como Parceiro
-                  <ArrowRight className="h-4 w-4" />
+                <Button size="lg" variant="secondary" className="gap-2" asChild>
+                  <Link href="/driver/register">
+                    Cadastre-se como Parceiro
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </Button>
                 <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10">
                   Fale com um Consultor

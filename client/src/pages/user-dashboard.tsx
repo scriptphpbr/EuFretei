@@ -186,7 +186,7 @@ const UserDashboard = () => {
                   <p className="mb-4">Ganhe dinheiro extra usando seu veículo para realizar fretes na plataforma</p>
                 </div>
                 <Button 
-                  onClick={() => navigate("/partners")} 
+                  onClick={() => navigate("/driver/register")} 
                   variant="secondary" 
                   className="bg-white text-orange-500 hover:bg-orange-50"
                 >
