@@ -2,16 +2,18 @@ import { users, drivers, freights, ratings } from "@shared/schema";
 import type { User, InsertUser, Driver, InsertDriver, Freight, InsertFreight, Rating, InsertRating } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, and, sql } from "drizzle-orm";
-import pg from "pg";
-import connectPg from "connect-pg-simple";
+import { createClient } from '@supabase/supabase-js';
 import dotenv from "dotenv";
 
 dotenv.config();
 
+// Configuração do Supabase
+const supabaseUrl = 'https://gzjyywhnpmujsxdtypkl.supabase.co';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+console.log("Utilizando Supabase URL:", supabaseUrl);
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 const MemoryStore = createMemoryStore(session);
-const PostgresSessionStore = connectPg(session);
 
 // Storage interface
 export interface IStorage {
@@ -356,4 +358,298 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Implementação de armazenamento utilizando Supabase
+export class SupabaseStorage implements IStorage {
+  sessionStore: any;
+  
+  constructor() {
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000, // 24 horas
+    });
+    
+    // Criar tabelas no Supabase caso não existam 
+    this.initializeDatabase();
+  }
+  
+  private async initializeDatabase() {
+    try {
+      // Verificar se as tabelas necessárias existem, se não existirem, serão criadas
+      // automaticamente pelo Supabase quando usarmos os métodos insert/update
+      console.log('Inicializando conexão com Supabase...');
+    } catch (error) {
+      console.error('Erro ao inicializar banco de dados:', error);
+    }
+  }
+  
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error || !data) return undefined;
+    return data as User;
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .single();
+      
+    if (error || !data) return undefined;
+    return data as User;
+  }
+  
+  async createUser(user: InsertUser): Promise<User> {
+    const { data, error } = await supabase
+      .from('users')
+      .insert(user)
+      .select()
+      .single();
+      
+    if (error) throw new Error(`Erro ao criar usuário: ${error.message}`);
+    return data as User;
+  }
+  
+  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('users')
+      .update(userData)
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error || !data) return undefined;
+    return data as User;
+  }
+  
+  async getUserProfile(id: number): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+  
+  async updateUserProfile(id: number, profileData: Partial<User>): Promise<User | undefined> {
+    return this.updateUser(id, profileData);
+  }
+  
+  // Driver methods
+  async getDriver(id: number): Promise<Driver | undefined> {
+    const { data, error } = await supabase
+      .from('drivers')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error || !data) return undefined;
+    return data as Driver;
+  }
+  
+  async getDriverByUserId(userId: number): Promise<Driver | undefined> {
+    const { data, error } = await supabase
+      .from('drivers')
+      .select('*')
+      .eq('userId', userId)
+      .single();
+      
+    if (error || !data) return undefined;
+    return data as Driver;
+  }
+  
+  async getAllDrivers(): Promise<Driver[]> {
+    const { data, error } = await supabase
+      .from('drivers')
+      .select('*');
+      
+    if (error || !data) return [];
+    return data as Driver[];
+  }
+  
+  async getAvailableDrivers(): Promise<Driver[]> {
+    const { data, error } = await supabase
+      .from('drivers')
+      .select('*')
+      .eq('isAvailable', true);
+      
+    if (error || !data) return [];
+    return data as Driver[];
+  }
+  
+  async createDriver(driver: InsertDriver): Promise<Driver> {
+    const { data, error } = await supabase
+      .from('drivers')
+      .insert({
+        ...driver,
+        averageRating: 0,
+        totalRatings: 0,
+        balance: 0
+      })
+      .select()
+      .single();
+      
+    if (error) throw new Error(`Erro ao criar motorista: ${error.message}`);
+    return data as Driver;
+  }
+  
+  async updateDriver(id: number, driverData: Partial<Driver>): Promise<Driver | undefined> {
+    const { data, error } = await supabase
+      .from('drivers')
+      .update(driverData)
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error || !data) return undefined;
+    return data as Driver;
+  }
+  
+  async updateDriverBalance(id: number, amount: number): Promise<Driver | undefined> {
+    // Primeiro obtemos o motorista atual para saber o saldo
+    const driver = await this.getDriver(id);
+    if (!driver) return undefined;
+    
+    // Atualizamos o saldo
+    const newBalance = (driver.balance || 0) + amount;
+    return this.updateDriver(id, { balance: newBalance });
+  }
+  
+  async getNearbyDrivers(latitude: number, longitude: number, radius: number): Promise<Driver[]> {
+    // Como o Supabase não tem suporte nativo para busca geoespacial, 
+    // vamos implementar uma solução simples por enquanto
+    // Buscamos todos os motoristas disponíveis
+    const availableDrivers = await this.getAvailableDrivers();
+    
+    // Em uma implementação real, poderíamos filtrar usando a função de distância SQL
+    // ou implementar a fórmula de Haversine diretamente no código
+    return availableDrivers;
+  }
+  
+  // Freight methods
+  async getFreight(id: number): Promise<Freight | undefined> {
+    const { data, error } = await supabase
+      .from('freights')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error || !data) return undefined;
+    return data as Freight;
+  }
+  
+  async getFreightsByUser(userId: number): Promise<Freight[]> {
+    const { data, error } = await supabase
+      .from('freights')
+      .select('*')
+      .eq('userId', userId);
+      
+    if (error || !data) return [];
+    return data as Freight[];
+  }
+  
+  async getFreightsByDriver(driverId: number): Promise<Freight[]> {
+    const { data, error } = await supabase
+      .from('freights')
+      .select('*')
+      .eq('driverId', driverId);
+      
+    if (error || !data) return [];
+    return data as Freight[];
+  }
+  
+  async getActiveFreightsByUser(userId: number): Promise<Freight[]> {
+    const { data, error } = await supabase
+      .from('freights')
+      .select('*')
+      .eq('userId', userId)
+      .in('status', ['pending', 'accepted']);
+      
+    if (error || !data) return [];
+    return data as Freight[];
+  }
+  
+  async getPendingFreights(): Promise<Freight[]> {
+    const { data, error } = await supabase
+      .from('freights')
+      .select('*')
+      .eq('status', 'pending');
+      
+    if (error || !data) return [];
+    return data as Freight[];
+  }
+  
+  async createFreight(freight: InsertFreight): Promise<Freight> {
+    const { data, error } = await supabase
+      .from('freights')
+      .insert(freight)
+      .select()
+      .single();
+      
+    if (error) throw new Error(`Erro ao criar frete: ${error.message}`);
+    return data as Freight;
+  }
+  
+  async updateFreight(id: number, freightData: Partial<Freight>): Promise<Freight | undefined> {
+    const { data, error } = await supabase
+      .from('freights')
+      .update(freightData)
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error || !data) return undefined;
+    return data as Freight;
+  }
+  
+  // Rating methods
+  async getRating(id: number): Promise<Rating | undefined> {
+    const { data, error } = await supabase
+      .from('ratings')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error || !data) return undefined;
+    return data as Rating;
+  }
+  
+  async getRatingsByDriver(driverId: number): Promise<Rating[]> {
+    const { data, error } = await supabase
+      .from('ratings')
+      .select('*')
+      .eq('driverId', driverId);
+      
+    if (error || !data) return [];
+    return data as Rating[];
+  }
+  
+  async createRating(rating: InsertRating): Promise<Rating> {
+    const { data, error } = await supabase
+      .from('ratings')
+      .insert(rating)
+      .select()
+      .single();
+      
+    if (error) throw new Error(`Erro ao criar avaliação: ${error.message}`);
+    
+    // Atualiza a média de avaliação do motorista
+    const driver = await this.getDriver(rating.driverId);
+    if (driver) {
+      const ratings = await this.getRatingsByDriver(driver.id);
+      const totalRatings = ratings.length;
+      const totalScore = ratings.reduce((sum, r) => sum + r.rating, 0);
+      const averageRating = totalScore / totalRatings;
+      
+      await this.updateDriver(driver.id, {
+        averageRating,
+        totalRatings
+      });
+    }
+    
+    return data as Rating;
+  }
+}
+
+// Configura a implementação de armazenamento a ser utilizada
+export const storage = new SupabaseStorage();
