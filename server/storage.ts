@@ -373,58 +373,244 @@ export class SupabaseStorage implements IStorage {
   
   private async initializeDatabase() {
     try {
-      console.log('Inicializando conexão com Supabase...');
+      console.log('Inicializando conexão com Supabase e criando tabelas...');
       
-      // Verificar se as tabelas existem consultando os dados
-      const { data: usersData, error: usersError } = await supabase
+      // Vamos tentar criar cada tabela diretamente com inserções iniciais
+      // Se a tabela não existir, o Supabase automaticamente a criará com a estrutura 
+      // da primeira inserção que fizermos.
+      
+      console.log('Criando tabela de usuários (users)...');
+      
+      // Verificar se já existe um usuário para não duplicar
+      const { data: existingUsers, error: userQueryError } = await supabase
         .from('users')
-        .select('id')
-        .limit(1);
-      
-      if (usersError) {
-        console.log('Erro ao verificar tabela users - a tabela pode não existir ou há problema na conexão:', usersError.message);
-      } else {
-        console.log('Tabela users existe no Supabase.');
+        .select('username')
+        .eq('username', 'driver1')
+        .maybeSingle();
+        
+      if (userQueryError && userQueryError.code !== '42P01') {
+        console.error('Erro ao verificar usuários existentes:', userQueryError);
       }
       
-      const { data: driversData, error: driversError } = await supabase
-        .from('drivers')
-        .select('id')
-        .limit(1);
-      
-      if (driversError) {
-        console.log('Erro ao verificar tabela drivers - a tabela pode não existir ou há problema na conexão:', driversError.message);
+      // Se não existir, criamos o primeiro usuário
+      if (!existingUsers) {
+        console.log('Tabela users não encontrada ou vazia, criando...');
+        
+        const { data: user1, error: user1Error } = await supabase
+          .from('users')
+          .insert({
+            username: "driver1",
+            password: "password", // Em produção seria criptografado
+            name: "João Silva",
+            email: "joao.silva@example.com",
+            phone: "(11) 98765-4321",
+            role: "driver",
+            profile_image: "https://images.unsplash.com/photo-1531384441138-2736e62e0919"
+          })
+          .select()
+          .maybeSingle();
+        
+        if (user1Error) {
+          console.error('Erro ao criar primeiro usuário:', user1Error);
+        } else {
+          console.log('Primeiro usuário criado com sucesso!');
+          
+          // Agora vamos tentar criar a tabela de motoristas com o usuário criado
+          console.log('Criando tabela de motoristas (drivers)...');
+          
+          const { data: driver1, error: driver1Error } = await supabase
+            .from('drivers')
+            .insert({
+              user_id: user1?.id,
+              vehicle_model: "Fiorino Furgão 2020",
+              license_plate: "ABC1234",
+              vehicle_type: "Small Van",
+              location: "São Paulo, SP",
+              is_available: true,
+              document: "123456789",
+              average_rating: 0,
+              total_ratings: 0,
+              balance: 0
+            })
+            .select()
+            .maybeSingle();
+            
+          if (driver1Error) {
+            console.error('Erro ao criar primeiro motorista:', driver1Error);
+          } else {
+            console.log('Primeiro motorista criado com sucesso!');
+            
+            // Agora vamos tentar criar a tabela de fretes
+            console.log('Criando tabela de fretes (freights)...');
+            
+            const { data: freight1, error: freight1Error } = await supabase
+              .from('freights')
+              .insert({
+                user_id: user1?.id,
+                driver_id: driver1?.id,
+                pickup_address: "Av. Paulista, 1000",
+                delivery_address: "Rua Augusta, 500",
+                date: "2025-03-30",
+                time: "14:00",
+                package_type: "Documentos",
+                instructions: "Cuidado, documentos importantes",
+                status: "completed",
+                amount: 50.00,
+                created_at: new Date()
+              })
+              .select()
+              .maybeSingle();
+              
+            if (freight1Error) {
+              console.error('Erro ao criar primeiro frete:', freight1Error);
+            } else {
+              console.log('Primeiro frete criado com sucesso!');
+              
+              // Por fim, vamos criar a tabela de avaliações
+              console.log('Criando tabela de avaliações (ratings)...');
+              
+              const { data: rating1, error: rating1Error } = await supabase
+                .from('ratings')
+                .insert({
+                  user_id: user1?.id,
+                  driver_id: driver1?.id,
+                  freight_id: freight1?.id,
+                  rating: 5,
+                  comment: "Excelente serviço, muito pontual!",
+                  created_at: new Date()
+                })
+                .select()
+                .maybeSingle();
+                
+              if (rating1Error) {
+                console.error('Erro ao criar primeira avaliação:', rating1Error);
+              } else {
+                console.log('Primeira avaliação criada com sucesso!');
+              }
+            }
+          }
+        }
       } else {
-        console.log('Tabela drivers existe no Supabase.');
+        console.log('Tabelas já existem no Supabase, pulando criação.');
       }
       
-      const { data: freightsData, error: freightsError } = await supabase
-        .from('freights')
-        .select('id')
-        .limit(1);
-      
-      if (freightsError) {
-        console.log('Erro ao verificar tabela freights - a tabela pode não existir ou há problema na conexão:', freightsError.message);
-      } else {
-        console.log('Tabela freights existe no Supabase.');
-      }
-      
-      const { data: ratingsData, error: ratingsError } = await supabase
-        .from('ratings')
-        .select('id')
-        .limit(1);
-      
-      if (ratingsError) {
-        console.log('Erro ao verificar tabela ratings - a tabela pode não existir ou há problema na conexão:', ratingsError.message);
-      } else {
-        console.log('Tabela ratings existe no Supabase.');
-      }
-      
-      // Criar usuário e motorista de exemplo para teste
-      await this.seedInitialDataIfNeeded();
+      // Criar mais alguns dados de exemplo para teste
+      await this.seedAdditionalDataIfNeeded();
       
     } catch (error) {
       console.error('Erro ao inicializar banco de dados:', error);
+    }
+  }
+  
+  private async seedAdditionalDataIfNeeded() {
+    try {
+      // Verificar se já existem mais dados no Supabase
+      const { data: existingDrivers, error: driverQueryError } = await supabase
+        .from('drivers')
+        .select('count')
+        .single();
+        
+      if (driverQueryError && driverQueryError.code !== '42P01') {
+        console.error('Erro ao verificar quantidade de motoristas:', driverQueryError);
+        return;
+      }
+      
+      // Se já temos pelo menos 3 motoristas, não precisamos semear mais
+      const driverCount = existingDrivers?.count || 0;
+      if (driverCount >= 3) {
+        console.log('Já existem pelo menos 3 motoristas, pulando semeadura adicional.');
+        return;
+      }
+      
+      console.log('Semeando dados adicionais no Supabase...');
+      
+      // Criar alguns usuários de teste
+      const driverPassword = 'password'; // Em produção seria criptografado
+      
+      // Criar motorista 2
+      const { data: user2, error: user2Error } = await supabase
+        .from('users')
+        .insert({
+          username: "driver2",
+          password: driverPassword,
+          name: "Carlos Oliveira",
+          email: "carlos.oliveira@example.com",
+          phone: "(21) 98765-4321",
+          role: "driver",
+          profile_image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d"
+        })
+        .select()
+        .maybeSingle();
+        
+      if (user2Error) {
+        console.error('Erro ao criar usuário 2:', user2Error);
+      } else if (user2) {
+        const { error: driver2Error } = await supabase
+          .from('drivers')
+          .insert({
+            user_id: user2.id,
+            vehicle_model: "VW Delivery 9.170",
+            license_plate: "DEF5678",
+            vehicle_type: "Truck",
+            location: "Rio de Janeiro, RJ",
+            is_available: true,
+            document: "987654321",
+            average_rating: 0,
+            total_ratings: 0,
+            balance: 0
+          });
+          
+        if (driver2Error) {
+          console.error('Erro ao criar motorista 2:', driver2Error);
+        } else {
+          console.log('Motorista 2 criado com sucesso!');
+        }
+      }
+      
+      // Criar motorista 3
+      const { data: user3, error: user3Error } = await supabase
+        .from('users')
+        .insert({
+          username: "driver3",
+          password: driverPassword,
+          name: "Amanda Souza", 
+          email: "amanda.souza@example.com",
+          phone: "(41) 98765-4321",
+          role: "driver",
+          profile_image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2"
+        })
+        .select()
+        .maybeSingle();
+        
+      if (user3Error) {
+        console.error('Erro ao criar usuário 3:', user3Error);
+      } else if (user3) {
+        const { error: driver3Error } = await supabase
+          .from('drivers')
+          .insert({
+            user_id: user3.id,
+            vehicle_model: "Renault Master Furgão",
+            license_plate: "GHI9012",
+            vehicle_type: "Medium Van",
+            location: "Curitiba, PR",
+            is_available: true,
+            document: "456789123",
+            average_rating: 0,
+            total_ratings: 0,
+            balance: 0
+          });
+          
+        if (driver3Error) {
+          console.error('Erro ao criar motorista 3:', driver3Error);
+        } else {
+          console.log('Motorista 3 criado com sucesso!');
+        }
+      }
+      
+      console.log('Dados adicionais semeados com sucesso!');
+      
+    } catch (error) {
+      console.error('Erro ao semear dados adicionais:', error);
     }
   }
   
