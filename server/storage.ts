@@ -2,8 +2,16 @@ import { users, drivers, freights, ratings } from "@shared/schema";
 import type { User, InsertUser, Driver, InsertDriver, Freight, InsertFreight, Rating, InsertRating } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { eq, and, sql } from "drizzle-orm";
+import pg from "pg";
+import connectPg from "connect-pg-simple";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 // Storage interface
 export interface IStorage {
@@ -12,8 +20,8 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
-  getUserProfile(id: number): Promise<User | undefined>; // Novo método para obter perfil do usuário
-  updateUserProfile(id: number, profileData: Partial<User>): Promise<User | undefined>; // Novo método para atualizar perfil
+  getUserProfile(id: number): Promise<User | undefined>; 
+  updateUserProfile(id: number, profileData: Partial<User>): Promise<User | undefined>; 
   
   // Driver methods
   getDriver(id: number): Promise<Driver | undefined>;
@@ -23,7 +31,7 @@ export interface IStorage {
   createDriver(driver: InsertDriver): Promise<Driver>;
   updateDriver(id: number, driver: Partial<Driver>): Promise<Driver | undefined>;
   updateDriverBalance(id: number, amount: number): Promise<Driver | undefined>;
-  getNearbyDrivers(latitude: number, longitude: number, radius: number): Promise<Driver[]>; // Novo método para encontrar motoristas próximos
+  getNearbyDrivers(latitude: number, longitude: number, radius: number): Promise<Driver[]>; 
   
   // Freight methods
   getFreight(id: number): Promise<Freight | undefined>;
