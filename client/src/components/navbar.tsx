@@ -8,7 +8,12 @@ import {
   Truck, 
   LogOut, 
   UserCircle,
-  LayoutDashboard 
+  LayoutDashboard,
+  Home,
+  Info,
+  HelpCircle,
+  Phone,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +30,7 @@ const Navbar = () => {
   const [location, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   
   // Handle scroll effect
@@ -49,6 +55,7 @@ const Navbar = () => {
       onSuccess: () => {
         navigate("/");
         setMobileMenuOpen(false);
+        setUserMenuOpen(false);
       }
     });
   };
@@ -57,6 +64,7 @@ const Navbar = () => {
   const handleNavigation = (path: string) => {
     navigate(path);
     setMobileMenuOpen(false);
+    setUserMenuOpen(false);
   };
   
   // Get user initials for avatar
@@ -87,6 +95,7 @@ const Navbar = () => {
             </span>
           </Link>
           
+          {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-6">
             <a 
               href="#como-funciona" 
@@ -194,24 +203,94 @@ const Navbar = () => {
             )}
           </div>
           
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden"
-          >
-            {mobileMenuOpen ? <X /> : <Menu />}
-          </Button>
+          {/* Mobile Controls */}
+          <div className="flex items-center gap-2 md:hidden">
+            {user && (
+              <DropdownMenu open={userMenuOpen} onOpenChange={setUserMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage 
+                        src={user.profileImage || ""} 
+                        alt={user.name || "User"} 
+                      />
+                      <AvatarFallback className="bg-primary text-white">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="font-medium">{user.name}</p>
+                      <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => handleNavigation("/dashboard")}
+                    className="cursor-pointer"
+                  >
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    <span>Dashboard</span>
+                  </DropdownMenuItem>
+                  {user.role === "driver" && (
+                    <DropdownMenuItem 
+                      onClick={() => handleNavigation("/driver/dashboard")}
+                      className="cursor-pointer"
+                    >
+                      <Truck className="mr-2 h-4 w-4" />
+                      <span>Painel do Motorista</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem 
+                    onClick={() => handleNavigation("/profile")}
+                    className="cursor-pointer"
+                  >
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>Meus Dados</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sair</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="h-9 w-9 p-0"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
       </nav>
       
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Site Navigation */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 bg-white z-40 pt-16 md:hidden">
           <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
-            <a 
-              href="#como-funciona" 
-              className="text-gray-600 hover:text-primary transition py-2 border-b border-gray-200"
+            <Button 
+              variant="ghost" 
+              onClick={() => handleNavigation("/")}
+              className="justify-start"
+            >
+              <Home className="mr-2 h-4 w-4" />
+              <span>Página Inicial</span>
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              className="justify-start"
               onClick={(e) => {
                 e.preventDefault();
                 setMobileMenuOpen(false);
@@ -219,11 +298,13 @@ const Navbar = () => {
                 section?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              Como Funciona
-            </a>
-            <a 
-              href="#motoristas" 
-              className="text-gray-600 hover:text-primary transition py-2 border-b border-gray-200"
+              <HelpCircle className="mr-2 h-4 w-4" />
+              <span>Como Funciona</span>
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              className="justify-start"
               onClick={(e) => {
                 e.preventDefault();
                 setMobileMenuOpen(false);
@@ -231,89 +312,44 @@ const Navbar = () => {
                 section?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              Motoristas
-            </a>
-            <a 
-              href="#seja-motorista" 
-              className="text-gray-600 hover:text-primary transition py-2 border-b border-gray-200"
-              onClick={(e) => {
-                e.preventDefault();
-                setMobileMenuOpen(false);
-                const section = document.getElementById("seja-motorista");
-                section?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              Seja Motorista
-            </a>
+              <Truck className="mr-2 h-4 w-4" />
+              <span>Motoristas</span>
+            </Button>
             
-            {!user ? (
-              <>
+            <Button 
+              variant="ghost" 
+              onClick={() => handleNavigation("/about")}
+              className="justify-start"
+            >
+              <Info className="mr-2 h-4 w-4" />
+              <span>Sobre Nós</span>
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              onClick={() => handleNavigation("/partners")}
+              className="justify-start"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              <span>Seja Motorista</span>
+            </Button>
+            
+            {!user && (
+              <div className="mt-4 flex flex-col gap-2">
                 <Button 
-                  variant="ghost" 
+                  variant="outline"
                   onClick={() => handleNavigation("/auth")}
-                  className="text-gray-600 hover:text-primary transition py-2 border-b border-gray-200 justify-start"
+                  className="w-full"
                 >
                   Entrar
                 </Button>
                 <Button 
                   onClick={() => handleNavigation("/auth")}
-                  className="mt-2"
+                  className="w-full"
                 >
                   Cadastrar
                 </Button>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-3 py-4 border-b border-gray-200">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage 
-                      src={user.profileImage || ""} 
-                      alt={user.name || "User"} 
-                    />
-                    <AvatarFallback className="bg-primary text-white">
-                      {getUserInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-sm text-gray-500">{user.email}</p>
-                  </div>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => handleNavigation("/dashboard")}
-                  className="justify-start"
-                >
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  <span>Dashboard</span>
-                </Button>
-                {user.role === "driver" && (
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => handleNavigation("/driver/dashboard")}
-                    className="justify-start"
-                  >
-                    <Truck className="mr-2 h-4 w-4" />
-                    <span>Painel do Motorista</span>
-                  </Button>
-                )}
-                <Button 
-                  variant="ghost" 
-                  onClick={() => handleNavigation("/profile")}
-                  className="justify-start"
-                >
-                  <UserCircle className="mr-2 h-4 w-4" />
-                  <span>Perfil</span>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={handleLogout}
-                  className="justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sair</span>
-                </Button>
-              </>
+              </div>
             )}
           </div>
         </div>
