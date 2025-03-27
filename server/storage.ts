@@ -40,6 +40,8 @@ export interface IStorage {
   createDriver(driver: InsertDriver): Promise<Driver>;
   updateDriver(id: number, driver: Partial<Driver>): Promise<Driver | undefined>;
   updateDriverBalance(id: number, amount: number): Promise<Driver | undefined>;
+  updateDriverHighlight(id: number, isHighlighted: boolean, days: number): Promise<Driver | undefined>;
+  updateDriverSubscription(id: number, subscriptionType: string): Promise<Driver | undefined>;
   getNearbyDrivers(latitude: number, longitude: number, radius: number): Promise<Driver[]>; 
   
   // Freight methods
@@ -169,6 +171,39 @@ export class MemStorage implements IStorage {
     const updatedDriver = { 
       ...driver, 
       balance: driver.balance + amount 
+    };
+    this.drivers.set(id, updatedDriver);
+    return updatedDriver;
+  }
+
+  async updateDriverHighlight(id: number, isHighlighted: boolean, days: number): Promise<Driver | undefined> {
+    const driver = await this.getDriver(id);
+    if (!driver) return undefined;
+    
+    const highlightEndDate = isHighlighted 
+      ? new Date(new Date().getTime() + days * 24 * 60 * 60 * 1000) 
+      : null;
+    
+    const updatedDriver = { 
+      ...driver, 
+      isHighlighted: isHighlighted,
+      highlightEndDate: highlightEndDate
+    };
+    this.drivers.set(id, updatedDriver);
+    return updatedDriver;
+  }
+  
+  async updateDriverSubscription(id: number, subscriptionType: string): Promise<Driver | undefined> {
+    const driver = await this.getDriver(id);
+    if (!driver) return undefined;
+    
+    // Definir a data de fim da assinatura com base no tipo (30 dias para todos os planos)
+    const subscriptionEndDate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+    
+    const updatedDriver = { 
+      ...driver, 
+      subscriptionType: subscriptionType,
+      subscriptionEndDate: subscriptionEndDate
     };
     this.drivers.set(id, updatedDriver);
     return updatedDriver;

@@ -26,7 +26,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-const Navbar = () => {
+interface NavbarProps {
+  onMenuClick?: () => void;
+}
+
+const Navbar = ({ onMenuClick }: NavbarProps) => {
   const [location, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -266,7 +270,13 @@ const Navbar = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={() => {
+                if (onMenuClick) {
+                  onMenuClick();
+                } else {
+                  setMobileMenuOpen(!mobileMenuOpen);
+                }
+              }}
               className="h-9 w-9 p-0"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

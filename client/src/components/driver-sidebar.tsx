@@ -65,7 +65,7 @@ const DriverSidebar = ({ onLogout, newFreights = 0 }: DriverSidebarProps) => {
             <div className="font-medium">{user?.name || "Motorista"}</div>
             <div className="text-xs text-gray-400 flex items-center gap-1">
               <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-              <span>{(user?.averageRating || 0).toFixed(1)}</span>
+              <span>4.5</span>
             </div>
           </div>
         </div>
@@ -121,6 +121,18 @@ const DriverSidebar = ({ onLogout, newFreights = 0 }: DriverSidebarProps) => {
             )}>
               <FileText className="w-5 h-5" />
               <span>Documentos</span>
+            </a>
+          </Link>
+          
+          <Link href="/driver/plans">
+            <a className={cn(
+              "flex items-center gap-3 p-3 rounded-lg transition-colors",
+              isActive("/driver/plans") 
+                ? "bg-primary bg-opacity-20" 
+                : "hover:bg-white hover:bg-opacity-10"
+            )}>
+              <Star className="w-5 h-5" />
+              <span>Planos e Destaques</span>
             </a>
           </Link>
           

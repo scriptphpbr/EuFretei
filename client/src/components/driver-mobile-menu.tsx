@@ -174,6 +174,20 @@ const DriverMobileMenu = ({
             variant="ghost"
             className={cn(
               "flex items-center gap-3 w-full justify-start text-white",
+              isActive("/driver/plans") 
+                ? "bg-primary bg-opacity-20" 
+                : "hover:bg-white hover:bg-opacity-10"
+            )}
+            onClick={() => handleNavigation("/driver/plans")}
+          >
+            <Star className="w-5 h-5" />
+            <span>Planos e Destaques</span>
+          </Button>
+          
+          <Button
+            variant="ghost"
+            className={cn(
+              "flex items-center gap-3 w-full justify-start text-white",
               isActive("/driver/profile") 
                 ? "bg-primary bg-opacity-20" 
                 : "hover:bg-white hover:bg-opacity-10"

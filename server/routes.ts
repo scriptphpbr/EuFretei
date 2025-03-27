@@ -6,7 +6,8 @@ import {
   insertDriverSchema, 
   insertFreightSchema, 
   insertRatingSchema,
-  profileUpdateSchema
+  profileUpdateSchema,
+  highlightUpdateSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";

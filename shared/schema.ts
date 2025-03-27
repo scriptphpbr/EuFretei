@@ -40,6 +40,10 @@ export const drivers = pgTable("drivers", {
   totalRatings: integer("total_ratings").default(0),
   balance: doublePrecision("balance").default(0),
   document: text("document").notNull(),
+  isHighlighted: boolean("is_highlighted").default(false),
+  highlightEndDate: timestamp("highlight_end_date"),
+  subscriptionType: text("subscription_type"),
+  subscriptionEndDate: timestamp("subscription_end_date"),
 });
 
 // Freight table - freight requests
@@ -74,7 +78,16 @@ export const insertUserSchema = createInsertSchema(users)
   .omit({ id: true, createdAt: true });
 
 export const insertDriverSchema = createInsertSchema(drivers)
-  .omit({ id: true, averageRating: true, totalRatings: true, balance: true });
+  .omit({ 
+    id: true, 
+    averageRating: true, 
+    totalRatings: true, 
+    balance: true,
+    isHighlighted: true,
+    highlightEndDate: true,
+    subscriptionType: true,
+    subscriptionEndDate: true
+  });
 
 export const insertFreightSchema = createInsertSchema(freights)
   .omit({ id: true, createdAt: true });
@@ -90,9 +103,15 @@ export const userRegistrationSchema = insertUserSchema.extend({
   path: ["confirmPassword"],
 });
 
-// Create a driver registration schema by merging user registration fields with driver fields
+// Create a driver registration schema for driver registration
 export const driverRegistrationSchema = z.object({
-  ...userRegistrationSchema.shape,
+  username: z.string().min(3, "Username deve ter pelo menos 3 caracteres"),
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+  confirmPassword: z.string(),
+  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
+  email: z.string().email("Email inválido"),
+  phone: z.string().min(10, "Telefone inválido"),
+  role: z.literal("driver"),
   vehicleModel: z.string().min(2, "Vehicle model is required"),
   licensePlate: z.string().min(3, "License plate is required"),
   vehicleType: z.string().min(2, "Vehicle type is required"),
@@ -145,6 +164,14 @@ export type InsertFreight = z.infer<typeof insertFreightSchema>;
 export type Rating = typeof ratings.$inferSelect;
 export type InsertRating = z.infer<typeof insertRatingSchema>;
 
+// Schema para atualização de planos e destaques do motorista
+export const highlightUpdateSchema = z.object({
+  isHighlighted: z.boolean(),
+  highlightDuration: z.number().min(1, "Duração mínima de 1 dia").optional(),
+  subscriptionType: z.enum(["basic", "premium", "pro"]).optional(),
+});
+
 export type LoginData = z.infer<typeof loginSchema>;
 export type RatingSubmission = z.infer<typeof ratingSubmissionSchema>;
 export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
+export type HighlightUpdate = z.infer<typeof highlightUpdateSchema>;

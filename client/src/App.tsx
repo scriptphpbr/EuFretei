@@ -13,6 +13,7 @@ import { ProtectedRoute } from "./lib/protected-route";
 import UserDashboard from "@/pages/user-dashboard";
 import DriverDashboard from "@/pages/driver-dashboard";
 import DriverRegistration from "@/pages/driver-register";
+import DriverPlans from "@/pages/driver-plans";
 import DriverDetail from "@/pages/driver-detail";
 import FreightRequest from "@/pages/freight-request";
 import Payment from "@/pages/payment";
@@ -30,6 +31,7 @@ function Router() {
       <ProtectedRoute path="/dashboard" component={UserDashboard} />
       <ProtectedRoute path="/driver/dashboard" component={DriverDashboard} />
       <ProtectedRoute path="/driver/register" component={DriverRegistration} />
+      <ProtectedRoute path="/driver/plans" component={DriverPlans} />
       <ProtectedRoute path="/driver/:id" component={DriverDetail} />
       <ProtectedRoute path="/freight/request/:driverId" component={FreightRequest} />
       <ProtectedRoute path="/freight/payment/:freightId" component={Payment} />

@@ -15,6 +15,7 @@ interface DriverCardProps {
     vehicleModel: string;
     location: string;
     isAvailable: boolean;
+    isHighlighted?: boolean;
   };
 }
 
@@ -85,7 +86,14 @@ const DriverCard = ({ driver }: DriverCardProps) => {
         
         <div className="flex-1">
           <div className="flex justify-between mb-1">
-            <h3 className="font-semibold text-lg">{driver.name}</h3>
+            <div className="flex items-center">
+              <h3 className="font-semibold text-lg">{driver.name}</h3>
+              {driver.isHighlighted && (
+                <span className="ml-1 text-amber-500" title="Motorista em destaque">
+                  🌟
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-1">
               {renderStars(driver.averageRating)}
               <span className="ml-1 text-gray-600 font-medium">
