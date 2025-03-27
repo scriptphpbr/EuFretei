@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import HowItWorksCard from "@/components/how-it-works-card";
 import DriverCard from "@/components/driver-card";
 import { useLocation } from "wouter";
@@ -235,6 +236,8 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+      
+      <Footer />
     </div>
   );
 };

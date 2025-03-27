@@ -5,6 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
+import AboutPage from "@/pages/about-page";
+import TermsPage from "@/pages/terms-page";
+import PrivacyPage from "@/pages/privacy-page";
+import PartnersPage from "@/pages/partners-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import UserDashboard from "@/pages/user-dashboard";
 import DriverDashboard from "@/pages/driver-dashboard";
@@ -19,6 +23,10 @@ function Router() {
     <Switch>
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/about" component={AboutPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/partners" component={PartnersPage} />
       <ProtectedRoute path="/dashboard" component={UserDashboard} />
       <ProtectedRoute path="/driver/dashboard" component={DriverDashboard} />
       <ProtectedRoute path="/driver/register" component={DriverRegistration} />
