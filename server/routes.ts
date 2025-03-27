@@ -47,6 +47,32 @@ function requireAdminRole(req: Request, res: Response, next: Function) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Rota temporária para transformar usuário em admin (remover em produção)
+  app.get("/api/make-admin/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "ID de usuário inválido" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      const updatedUser = await storage.updateUser(userId, { role: "admin" });
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Falha ao atualizar usuário" });
+      }
+      
+      res.status(200).json({ message: "Usuário promovido a administrador com sucesso!", user: updatedUser });
+    } catch (error) {
+      console.error("Erro ao promover usuário:", error);
+      res.status(500).json({ message: "Erro ao promover usuário" });
+    }
+  });
+  
   // Set up authentication routes
   setupAuth(app);
   
