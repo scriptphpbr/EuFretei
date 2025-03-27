@@ -124,27 +124,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/drivers", requireAuth, async (req, res) => {
     try {
+      console.log("Recebendo solicitação para criar perfil de motorista:", req.body);
+      
+      // Verificar se o usuário já é motorista
+      const existingDriver = await storage.getDriverByUserId(req.user!.id);
+      if (existingDriver) {
+        return res.status(400).json({ message: "Você já tem um perfil de motorista" });
+      }
+      
       // Validate driver data
       const driverData = insertDriverSchema.parse({
         ...req.body,
-        userId: req.user!.id
+        userId: req.user!.id,
+        balance: 0,
+        averageRating: 0,
+        totalRatings: 0,
+        isAvailable: true,
+        latitude: 0,
+        longitude: 0
       });
+      
+      console.log("Dados validados do motorista:", driverData);
       
       // Update user role to driver
       await storage.updateUser(req.user!.id, { role: "driver" });
       
       // Create the driver profile
       const driver = await storage.createDriver(driverData);
+      console.log("Perfil de motorista criado com sucesso:", driver);
       
-      res.status(201).json(driver);
+      // Get the updated user
+      const updatedUser = await storage.getUser(req.user!.id);
+      
+      res.status(201).json({
+        driver,
+        user: updatedUser
+      });
     } catch (error) {
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
+        console.error("Erro de validação ao criar motorista:", validationError);
         return res.status(400).json({ message: validationError.message });
       }
       
-      console.error("Error creating driver:", error);
-      res.status(500).json({ message: "Failed to create driver profile" });
+      console.error("Erro ao criar perfil de motorista:", error);
+      res.status(500).json({ message: "Falha ao criar perfil de motorista" });
     }
   });
   

@@ -80,28 +80,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const registerDriverMutation = useMutation({
     mutationFn: async (driverData: DriverRegistration) => {
-      // First register the user
-      const userRes = await apiRequest("POST", "/api/register", {
-        username: driverData.username,
-        password: driverData.password,
-        name: driverData.name,
-        email: driverData.email,
-        phone: driverData.phone,
-        role: "driver"
-      });
-      
-      const userData = await userRes.json();
-      
-      // Then create the driver profile
-      await apiRequest("POST", "/api/drivers", {
-        vehicleModel: driverData.vehicleModel,
-        licensePlate: driverData.licensePlate,
-        vehicleType: driverData.vehicleType,
-        location: driverData.location,
-        document: driverData.document
-      });
-      
-      return userData;
+      try {
+        // First check if we're already logged in
+        const currentUser = queryClient.getQueryData<User | null>(["/api/user"]);
+        
+        let userData;
+        
+        if (!currentUser) {
+          // If not logged in, register a new user first
+          const userRes = await apiRequest("POST", "/api/register", {
+            username: driverData.username,
+            password: driverData.password,
+            name: driverData.name,
+            email: driverData.email,
+            phone: driverData.phone,
+            role: "driver"
+          });
+          
+          userData = await userRes.json();
+          
+          // Ensure we have a successful user registration before proceeding
+          if (!userData || !userData.id) {
+            throw new Error("Falha ao registrar usuário");
+          }
+        } else {
+          // We're already logged in, use the current user
+          userData = currentUser;
+        }
+        
+        // Then create the driver profile
+        const driverRes = await apiRequest("POST", "/api/drivers", {
+          vehicleModel: driverData.vehicleModel,
+          licensePlate: driverData.licensePlate,
+          vehicleType: driverData.vehicleType,
+          location: driverData.location,
+          document: driverData.document
+        });
+        
+        if (!driverRes.ok) {
+          const errorData = await driverRes.json();
+          throw new Error(errorData.message || "Falha ao criar perfil de motorista");
+        }
+        
+        // Update user data with driver role
+        const updatedUser = {
+          ...userData,
+          role: "driver"
+        };
+        
+        return updatedUser;
+      } catch (error) {
+        console.error("Driver registration error:", error);
+        throw error;
+      }
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
