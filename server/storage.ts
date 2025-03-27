@@ -1,5 +1,13 @@
-import { users, drivers, freights, ratings } from "@shared/schema";
-import type { User, InsertUser, Driver, InsertDriver, Freight, InsertFreight, Rating, InsertRating } from "@shared/schema";
+import { users, drivers, freights, ratings, transactions, systemSettings, withdrawalRequests } from "@shared/schema";
+import type { 
+  User, InsertUser, 
+  Driver, InsertDriver, 
+  Freight, InsertFreight, 
+  Rating, InsertRating,
+  Transaction, InsertTransaction,
+  SystemSetting, InsertSystemSetting,
+  WithdrawalRequest, InsertWithdrawalRequest
+} from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { createClient } from '@supabase/supabase-js';
@@ -58,6 +66,32 @@ export interface IStorage {
   getRatingsByDriver(driverId: number): Promise<Rating[]>;
   createRating(rating: InsertRating): Promise<Rating>;
   
+  // Transaction methods
+  getTransaction(id: number): Promise<Transaction | undefined>;
+  getTransactionsByUser(userId: number): Promise<Transaction[]>;
+  getTransactionsByDriver(driverId: number): Promise<Transaction[]>;
+  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  updateTransaction(id: number, transaction: Partial<Transaction>): Promise<Transaction | undefined>;
+  
+  // System settings methods
+  getSystemSetting(key: string): Promise<SystemSetting | undefined>;
+  getAllSystemSettings(): Promise<SystemSetting[]>;
+  getSystemSettingsByCategory(category: string): Promise<SystemSetting[]>;
+  createSystemSetting(setting: InsertSystemSetting): Promise<SystemSetting>;
+  updateSystemSetting(key: string, value: string, updatedBy: number): Promise<SystemSetting | undefined>;
+  
+  // Withdrawal request methods
+  getWithdrawalRequest(id: number): Promise<WithdrawalRequest | undefined>;
+  getWithdrawalRequestsByDriver(driverId: number): Promise<WithdrawalRequest[]>;
+  getPendingWithdrawalRequests(): Promise<WithdrawalRequest[]>;
+  createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest>;
+  updateWithdrawalRequest(id: number, request: Partial<WithdrawalRequest>): Promise<WithdrawalRequest | undefined>;
+  
+  // Admin methods
+  getAllUsers(): Promise<User[]>;
+  getUsersByRole(role: string): Promise<User[]>;
+  getSystemStats(): Promise<any>; // Returns system statistics for admin dashboard
+  
   // Session store
   sessionStore: session.SessionStore;
 }
@@ -68,11 +102,17 @@ export class MemStorage implements IStorage {
   private drivers: Map<number, Driver>;
   private freights: Map<number, Freight>;
   private ratings: Map<number, Rating>;
+  private transactions: Map<number, Transaction>;
+  private systemSettings: Map<string, SystemSetting>;
+  private withdrawalRequests: Map<number, WithdrawalRequest>;
   
   userCurrentId: number;
   driverCurrentId: number;
   freightCurrentId: number;
   ratingCurrentId: number;
+  transactionCurrentId: number;
+  systemSettingCurrentId: number;
+  withdrawalRequestCurrentId: number;
   sessionStore: session.SessionStore;
 
   constructor() {
@@ -80,11 +120,17 @@ export class MemStorage implements IStorage {
     this.drivers = new Map();
     this.freights = new Map();
     this.ratings = new Map();
+    this.transactions = new Map();
+    this.systemSettings = new Map();
+    this.withdrawalRequests = new Map();
     
     this.userCurrentId = 1;
     this.driverCurrentId = 1;
     this.freightCurrentId = 1;
     this.ratingCurrentId = 1;
+    this.transactionCurrentId = 1;
+    this.systemSettingCurrentId = 1;
+    this.withdrawalRequestCurrentId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // 24 hours
@@ -313,9 +359,200 @@ export class MemStorage implements IStorage {
     
     return rating;
   }
+  
+  // Transaction methods
+  async getTransaction(id: number): Promise<Transaction | undefined> {
+    return this.transactions.get(id);
+  }
+  
+  async getTransactionsByUser(userId: number): Promise<Transaction[]> {
+    return Array.from(this.transactions.values()).filter(
+      (transaction) => transaction.userId === userId
+    );
+  }
+  
+  async getTransactionsByDriver(driverId: number): Promise<Transaction[]> {
+    return Array.from(this.transactions.values()).filter(
+      (transaction) => transaction.driverId === driverId
+    );
+  }
+  
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+    const id = this.transactionCurrentId++;
+    const transaction: Transaction = {
+      ...insertTransaction,
+      id,
+      createdAt: new Date()
+    };
+    this.transactions.set(id, transaction);
+    return transaction;
+  }
+  
+  async updateTransaction(id: number, transactionData: Partial<Transaction>): Promise<Transaction | undefined> {
+    const transaction = await this.getTransaction(id);
+    if (!transaction) return undefined;
+    
+    const updatedTransaction = { ...transaction, ...transactionData };
+    this.transactions.set(id, updatedTransaction);
+    return updatedTransaction;
+  }
+  
+  // System settings methods
+  async getSystemSetting(key: string): Promise<SystemSetting | undefined> {
+    return this.systemSettings.get(key);
+  }
+  
+  async getAllSystemSettings(): Promise<SystemSetting[]> {
+    return Array.from(this.systemSettings.values());
+  }
+  
+  async getSystemSettingsByCategory(category: string): Promise<SystemSetting[]> {
+    return Array.from(this.systemSettings.values()).filter(
+      (setting) => setting.category === category
+    );
+  }
+  
+  async createSystemSetting(insertSetting: InsertSystemSetting): Promise<SystemSetting> {
+    const setting: SystemSetting = {
+      ...insertSetting,
+      updatedAt: new Date()
+    };
+    this.systemSettings.set(insertSetting.key, setting);
+    return setting;
+  }
+  
+  async updateSystemSetting(key: string, value: string, updatedBy: number): Promise<SystemSetting | undefined> {
+    const setting = await this.getSystemSetting(key);
+    if (!setting) return undefined;
+    
+    const updatedSetting = { 
+      ...setting, 
+      value,
+      updatedBy,
+      updatedAt: new Date() 
+    };
+    this.systemSettings.set(key, updatedSetting);
+    return updatedSetting;
+  }
+  
+  // Withdrawal request methods
+  async getWithdrawalRequest(id: number): Promise<WithdrawalRequest | undefined> {
+    return this.withdrawalRequests.get(id);
+  }
+  
+  async getWithdrawalRequestsByDriver(driverId: number): Promise<WithdrawalRequest[]> {
+    return Array.from(this.withdrawalRequests.values()).filter(
+      (request) => request.driverId === driverId
+    );
+  }
+  
+  async getPendingWithdrawalRequests(): Promise<WithdrawalRequest[]> {
+    return Array.from(this.withdrawalRequests.values()).filter(
+      (request) => request.status === 'pending'
+    );
+  }
+  
+  async createWithdrawalRequest(insertRequest: InsertWithdrawalRequest): Promise<WithdrawalRequest> {
+    const id = this.withdrawalRequestCurrentId++;
+    const request: WithdrawalRequest = {
+      ...insertRequest,
+      id,
+      createdAt: new Date()
+    };
+    this.withdrawalRequests.set(id, request);
+    return request;
+  }
+  
+  async updateWithdrawalRequest(id: number, requestData: Partial<WithdrawalRequest>): Promise<WithdrawalRequest | undefined> {
+    const request = await this.getWithdrawalRequest(id);
+    if (!request) return undefined;
+    
+    const updatedRequest = { ...request, ...requestData };
+    this.withdrawalRequests.set(id, updatedRequest);
+    return updatedRequest;
+  }
+  
+  // Admin methods
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+  
+  async getUsersByRole(role: string): Promise<User[]> {
+    return Array.from(this.users.values()).filter(
+      (user) => user.role === role
+    );
+  }
+  
+  async getSystemStats(): Promise<any> {
+    // Total number of users
+    const totalUsers = this.users.size;
+    
+    // Total number of drivers
+    const totalDrivers = this.drivers.size;
+    
+    // Total number of freights
+    const totalFreights = this.freights.size;
+    
+    // Total number of completed freights
+    const completedFreights = Array.from(this.freights.values()).filter(
+      (freight) => freight.status === 'completed'
+    ).length;
+    
+    // Total revenue
+    const totalRevenue = Array.from(this.transactions.values())
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+    
+    // Revenue by month (last 6 months)
+    const now = new Date();
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(now.getMonth() - 6);
+    
+    const revenueByMonth: Record<string, number> = {};
+    
+    // Initialize the last 6 months with zero revenue
+    for (let i = 0; i < 6; i++) {
+      const monthDate = new Date();
+      monthDate.setMonth(now.getMonth() - i);
+      const monthKey = `${monthDate.getFullYear()}-${monthDate.getMonth() + 1}`;
+      revenueByMonth[monthKey] = 0;
+    }
+    
+    // Calculate revenue for each month
+    Array.from(this.transactions.values())
+      .filter(transaction => transaction.createdAt >= sixMonthsAgo)
+      .forEach(transaction => {
+        const date = transaction.createdAt;
+        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+        if (revenueByMonth[monthKey] !== undefined) {
+          revenueByMonth[monthKey] += transaction.amount;
+        }
+      });
+    
+    return {
+      totalUsers,
+      totalDrivers,
+      totalFreights,
+      completedFreights,
+      freightCompletionRate: totalFreights > 0 ? completedFreights / totalFreights : 0,
+      totalRevenue,
+      revenueByMonth,
+      pendingWithdrawals: this.withdrawalRequests.size
+    };
+  }
 
   // Seed initial data for demo
   private async seedInitialData() {
+    // Create admin user
+    const adminUser = await this.createUser({
+      username: "admin",
+      password: "admin123", // This will be hashed by the auth system
+      name: "Administrador",
+      email: "admin@eufretei.com.br",
+      phone: "(11) 99999-9999",
+      role: "admin",
+      profileImage: "https://images.unsplash.com/photo-1566753323558-f4e0952af115"
+    });
+    
     // Create demo users
     const user1 = await this.createUser({
       username: "driver1",

@@ -10,7 +10,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   phone: text("phone").notNull(),
-  role: text("role").notNull().default("user"), // "user" or "driver"
+  role: text("role").notNull().default("user"), // "user", "driver" ou "admin"
   profileImage: text("profile_image"),
   createdAt: timestamp("created_at").defaultNow(),
   
@@ -73,6 +73,46 @@ export const ratings = pgTable("ratings", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Transaction table - record of all financial transactions
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  driverId: integer("driver_id").references(() => drivers.id),
+  freightId: integer("freight_id").references(() => freights.id),
+  type: text("type").notNull(), // "payment", "withdrawal", "commission", "subscription", "highlight"
+  amount: doublePrecision("amount").notNull(),
+  status: text("status").notNull().default("pending"), // "pending", "completed", "failed", "cancelled"
+  description: text("description"),
+  transactionDate: timestamp("transaction_date").defaultNow(),
+  paymentMethod: text("payment_method"), // "pix", "credit_card", etc.
+  paymentDetails: text("payment_details"), // pix code, last 4 digits, etc.
+});
+
+// SystemSettings table - system configuration values
+export const systemSettings = pgTable("system_settings", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // "tax", "commission", "app", etc.
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: integer("updated_by").references(() => users.id),
+});
+
+// WithdrawalRequests table - driver withdrawal requests
+export const withdrawalRequests = pgTable("withdrawal_requests", {
+  id: serial("id").primaryKey(),
+  driverId: integer("driver_id").notNull().references(() => drivers.id),
+  amount: doublePrecision("amount").notNull(),
+  status: text("status").notNull().default("pending"), // "pending", "approved", "rejected"
+  requestDate: timestamp("request_date").defaultNow(),
+  processedDate: timestamp("processed_date"),
+  processedBy: integer("processed_by").references(() => users.id),
+  bankInfo: text("bank_info"),
+  pixKey: text("pix_key"),
+  notes: text("notes"),
+});
+
 // Create Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users)
   .omit({ id: true, createdAt: true });
@@ -94,6 +134,15 @@ export const insertFreightSchema = createInsertSchema(freights)
 
 export const insertRatingSchema = createInsertSchema(ratings)
   .omit({ id: true, createdAt: true });
+
+export const insertTransactionSchema = createInsertSchema(transactions)
+  .omit({ id: true, transactionDate: true });
+
+export const insertSystemSettingSchema = createInsertSchema(systemSettings)
+  .omit({ id: true, updatedAt: true });
+
+export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalRequests)
+  .omit({ id: true, requestDate: true, processedDate: true });
 
 // Extended schemas for specific use cases
 export const userRegistrationSchema = insertUserSchema.extend({
@@ -164,6 +213,15 @@ export type InsertFreight = z.infer<typeof insertFreightSchema>;
 export type Rating = typeof ratings.$inferSelect;
 export type InsertRating = z.infer<typeof insertRatingSchema>;
 
+export type Transaction = typeof transactions.$inferSelect;
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type InsertSystemSetting = z.infer<typeof insertSystemSettingSchema>;
+
+export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
+export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
+
 // Schema para atualização de planos e destaques do motorista
 export const highlightUpdateSchema = z.object({
   isHighlighted: z.boolean(),
@@ -176,3 +234,13 @@ export type LoginData = z.infer<typeof loginSchema>;
 export type RatingSubmission = z.infer<typeof ratingSubmissionSchema>;
 export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
 export type HighlightUpdate = z.infer<typeof highlightUpdateSchema>;
+
+// System fees schemas
+export const feeUpdateSchema = z.object({
+  feeType: z.enum(["base", "distance", "time", "weight", "size", "urgent", "special", "platform"]),
+  value: z.string(),
+  description: z.string().optional(),
+  category: z.string().default("fees")
+});
+
+export type FeeUpdate = z.infer<typeof feeUpdateSchema>;
