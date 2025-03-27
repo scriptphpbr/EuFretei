@@ -143,32 +143,102 @@ const DriverPlans = () => {
     }
   });
 
-  // Mutação para processar o pagamento
+  // Mutação para processar o destaque do perfil
+  const processHighlightMutation = useMutation({
+    mutationFn: async (highlightData: { days: number, isHighlighted: boolean }) => {
+      const res = await apiRequest("POST", "/api/driver/highlight", highlightData);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Erro ao destacar perfil");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Perfil destacado",
+        description: "Seu perfil foi destacado com sucesso!",
+        variant: "default"
+      });
+      
+      // Invalidar as queries para recarregar os dados
+      queryClient.invalidateQueries({ queryKey: ["/api/driver/dashboard"] });
+      
+      // Fechar o diálogo de pagamento
+      setOpenPaymentDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao destacar perfil",
+        description: error.message || "Ocorreu um erro ao destacar seu perfil.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutação para processar a assinatura
+  const processSubscriptionMutation = useMutation({
+    mutationFn: async (subscriptionData: { subscriptionType: string }) => {
+      const res = await apiRequest("POST", "/api/driver/subscription", subscriptionData);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Erro ao atualizar assinatura");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Assinatura ativada",
+        description: "Sua assinatura foi ativada com sucesso!",
+        variant: "default"
+      });
+      
+      // Invalidar as queries para recarregar os dados
+      queryClient.invalidateQueries({ queryKey: ["/api/driver/dashboard"] });
+      
+      // Fechar o diálogo de pagamento
+      setOpenPaymentDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro na assinatura",
+        description: error.message || "Ocorreu um erro ao ativar sua assinatura.",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Simulação de processamento de pagamento
   const processPaymentMutation = useMutation({
     mutationFn: async (paymentData: any) => {
       // Aqui simularemos o processamento do pagamento
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Na implementação real, você faria uma chamada à API aqui
-      // const res = await apiRequest("POST", "/api/payments", paymentData);
-      // return await res.json();
-      
-      // Por enquanto, vamos simular o sucesso do pagamento
       return { success: true };
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast({
         title: "Pagamento processado",
         description: "Seu pagamento foi processado com sucesso!",
         variant: "default"
       });
       
-      // Invalidar as queries para recarregar os dados
-      queryClient.invalidateQueries({ queryKey: ["/api/driver/subscriptions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/driver/highlights"] });
-      
-      // Fechar o diálogo de pagamento
-      setOpenPaymentDialog(false);
+      // Após o pagamento, processar a assinatura ou destaque conforme o tipo
+      if (paymentType === 'subscription' && selectedPlan) {
+        const plan = selectedPlan as Plan;
+        let subscriptionType = 'basic';
+        
+        // Mapear o plano selecionado para o tipo de assinatura
+        if (plan.id === 1) subscriptionType = 'basic';
+        else if (plan.id === 2) subscriptionType = 'premium';
+        else if (plan.id === 3) subscriptionType = 'vip';
+        
+        processSubscriptionMutation.mutate({ subscriptionType });
+      } else if (paymentType === 'highlight' && selectedPlan) {
+        const plan = selectedPlan as HighlightPlan;
+        processHighlightMutation.mutate({ 
+          days: plan.days,
+          isHighlighted: true 
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -176,6 +246,7 @@ const DriverPlans = () => {
         description: error.message || "Ocorreu um erro ao processar o pagamento.",
         variant: "destructive"
       });
+      setOpenPaymentDialog(false);
     }
   });
 

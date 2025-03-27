@@ -627,6 +627,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Driver highlight API
+  app.post("/api/driver/highlight", requireDriverRole, async (req, res) => {
+    try {
+      // Validar os dados do destaque
+      const highlightData = highlightUpdateSchema.parse(req.body);
+      
+      // Encontrar o motorista pelo ID do usuário
+      const driver = await storage.getDriverByUserId(req.user!.id);
+      if (!driver) {
+        return res.status(404).json({ message: "Perfil de motorista não encontrado" });
+      }
+      
+      // Obter os dias de destaque e o status
+      const { days, isHighlighted } = highlightData;
+      
+      // Atualizar o destaque do motorista
+      const updatedDriver = await storage.updateDriverHighlight(
+        driver.id, 
+        isHighlighted, 
+        days
+      );
+      
+      if (!updatedDriver) {
+        return res.status(404).json({ message: "Erro ao atualizar o destaque do motorista" });
+      }
+      
+      res.json({
+        success: true,
+        driver: updatedDriver
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      
+      console.error("Erro ao destacar motorista:", error);
+      res.status(500).json({ message: "Falha ao destacar o perfil do motorista" });
+    }
+  });
+  
+  // Driver subscription API
+  app.post("/api/driver/subscription", requireDriverRole, async (req, res) => {
+    try {
+      // Validar os dados da assinatura
+      const { subscriptionType } = req.body;
+      
+      if (!subscriptionType || !["basic", "premium", "vip"].includes(subscriptionType)) {
+        return res.status(400).json({ message: "Tipo de assinatura inválido" });
+      }
+      
+      // Encontrar o motorista pelo ID do usuário
+      const driver = await storage.getDriverByUserId(req.user!.id);
+      if (!driver) {
+        return res.status(404).json({ message: "Perfil de motorista não encontrado" });
+      }
+      
+      // Atualizar a assinatura do motorista
+      const updatedDriver = await storage.updateDriverSubscription(
+        driver.id,
+        subscriptionType
+      );
+      
+      if (!updatedDriver) {
+        return res.status(404).json({ message: "Erro ao atualizar a assinatura do motorista" });
+      }
+      
+      res.json({
+        success: true,
+        driver: updatedDriver
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar assinatura:", error);
+      res.status(500).json({ message: "Falha ao atualizar assinatura do motorista" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

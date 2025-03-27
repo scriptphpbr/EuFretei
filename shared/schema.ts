@@ -167,8 +167,9 @@ export type InsertRating = z.infer<typeof insertRatingSchema>;
 // Schema para atualização de planos e destaques do motorista
 export const highlightUpdateSchema = z.object({
   isHighlighted: z.boolean(),
+  days: z.number().min(1, "Duração mínima de 1 dia"),
   highlightDuration: z.number().min(1, "Duração mínima de 1 dia").optional(),
-  subscriptionType: z.enum(["basic", "premium", "pro"]).optional(),
+  subscriptionType: z.enum(["basic", "premium", "vip"]).optional(),
 });
 
 export type LoginData = z.infer<typeof loginSchema>;
