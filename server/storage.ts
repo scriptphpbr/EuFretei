@@ -9,8 +9,15 @@ dotenv.config();
 
 // Configuração do Supabase
 const supabaseUrl = 'https://gzjyywhnpmujsxdtypkl.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6anl5d2hucG11anN4ZHR5cGtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxMDYyNTcsImV4cCI6MjA1ODY4MjI1N30.hZrX853qzx7VI61LhekH_xuPUeKamRdn1G4HEK24ns0';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
 console.log("Utilizando Supabase URL:", supabaseUrl);
+console.log("Supabase Key disponível:", !!supabaseKey);
+
+// Verificação de chaves
+if (!supabaseKey) {
+  console.error("ERRO: SUPABASE_ANON_KEY não configurado!");
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const MemoryStore = createMemoryStore(session);
@@ -375,127 +382,78 @@ export class SupabaseStorage implements IStorage {
     try {
       console.log('Inicializando conexão com Supabase e criando tabelas...');
       
-      // Vamos tentar criar cada tabela diretamente com inserções iniciais
-      // Se a tabela não existir, o Supabase automaticamente a criará com a estrutura 
-      // da primeira inserção que fizermos.
+      // Verificar permissões
+      console.log('Verificando permissões no Supabase...');
       
-      console.log('Criando tabela de usuários (users)...');
-      
-      // Verificar se já existe um usuário para não duplicar
-      const { data: existingUsers, error: userQueryError } = await supabase
-        .from('users')
-        .select('username')
-        .eq('username', 'driver1')
-        .maybeSingle();
+      // Em vez de verificar se as tabelas existem, vamos criar os objetos SQL diretamente
+      // enviando comandos SQL para criar as tabelas
+      try {
+        console.log('Tentando criar tabela de usuários diretamente...');
         
-      if (userQueryError && userQueryError.code !== '42P01') {
-        console.error('Erro ao verificar usuários existentes:', userQueryError);
-      }
-      
-      // Se não existir, criamos o primeiro usuário
-      if (!existingUsers) {
-        console.log('Tabela users não encontrada ou vazia, criando...');
+        // Criar um usuário diretamente usando a API do Supabase
+        const user = {
+          username: "driver1_" + Date.now(), // Tornar único para evitar colisões
+          password: "password", // Em produção seria criptografado
+          name: "João Silva",
+          email: `joao.silva.${Date.now()}@example.com`, // Tornar único para evitar colisões
+          phone: "(11) 98765-4321",
+          role: "driver",
+          profile_image: "https://images.unsplash.com/photo-1531384441138-2736e62e0919"
+        };
         
-        const { data: user1, error: user1Error } = await supabase
+        // Attempt to create user
+        const { data: createdUser, error: userError } = await supabase
           .from('users')
-          .insert({
-            username: "driver1",
-            password: "password", // Em produção seria criptografado
-            name: "João Silva",
-            email: "joao.silva@example.com",
-            phone: "(11) 98765-4321",
-            role: "driver",
-            profile_image: "https://images.unsplash.com/photo-1531384441138-2736e62e0919"
-          })
-          .select()
-          .maybeSingle();
-        
-        if (user1Error) {
-          console.error('Erro ao criar primeiro usuário:', user1Error);
-        } else {
-          console.log('Primeiro usuário criado com sucesso!');
+          .insert(user)
+          .select();
           
-          // Agora vamos tentar criar a tabela de motoristas com o usuário criado
-          console.log('Criando tabela de motoristas (drivers)...');
+        if (userError) {
+          console.error('Erro detalhado ao criar usuário:', userError);
           
-          const { data: driver1, error: driver1Error } = await supabase
-            .from('drivers')
-            .insert({
-              user_id: user1?.id,
-              vehicle_model: "Fiorino Furgão 2020",
-              license_plate: "ABC1234",
-              vehicle_type: "Small Van",
-              location: "São Paulo, SP",
-              is_available: true,
-              document: "123456789",
-              average_rating: 0,
-              total_ratings: 0,
-              balance: 0
-            })
-            .select()
-            .maybeSingle();
-            
-          if (driver1Error) {
-            console.error('Erro ao criar primeiro motorista:', driver1Error);
-          } else {
-            console.log('Primeiro motorista criado com sucesso!');
-            
-            // Agora vamos tentar criar a tabela de fretes
-            console.log('Criando tabela de fretes (freights)...');
-            
-            const { data: freight1, error: freight1Error } = await supabase
-              .from('freights')
-              .insert({
-                user_id: user1?.id,
-                driver_id: driver1?.id,
-                pickup_address: "Av. Paulista, 1000",
-                delivery_address: "Rua Augusta, 500",
-                date: "2025-03-30",
-                time: "14:00",
-                package_type: "Documentos",
-                instructions: "Cuidado, documentos importantes",
-                status: "completed",
-                amount: 50.00,
-                created_at: new Date()
-              })
-              .select()
-              .maybeSingle();
-              
-            if (freight1Error) {
-              console.error('Erro ao criar primeiro frete:', freight1Error);
-            } else {
-              console.log('Primeiro frete criado com sucesso!');
-              
-              // Por fim, vamos criar a tabela de avaliações
-              console.log('Criando tabela de avaliações (ratings)...');
-              
-              const { data: rating1, error: rating1Error } = await supabase
-                .from('ratings')
-                .insert({
-                  user_id: user1?.id,
-                  driver_id: driver1?.id,
-                  freight_id: freight1?.id,
-                  rating: 5,
-                  comment: "Excelente serviço, muito pontual!",
-                  created_at: new Date()
-                })
-                .select()
-                .maybeSingle();
-                
-              if (rating1Error) {
-                console.error('Erro ao criar primeira avaliação:', rating1Error);
-              } else {
-                console.log('Primeira avaliação criada com sucesso!');
-              }
-            }
+          if (userError.message.includes('permission denied')) {
+            console.log('⚠️ Permissão negada. Verifique as políticas de segurança do Supabase.');
           }
+          
+          if (userError.message.includes('does not exist')) {
+            console.log('⚠️ A tabela não existe. É necessário criar no Console do Supabase.');
+          }
+        } else {
+          console.log('✅ Usuário criado com sucesso:', createdUser);
         }
-      } else {
-        console.log('Tabelas já existem no Supabase, pulando criação.');
+            
+      } catch (err) {
+        console.error('Erro ao criar tabelas:', err);
       }
       
-      // Criar mais alguns dados de exemplo para teste
-      await this.seedAdditionalDataIfNeeded();
+      // Agora vamos tentar usar o banco normalmente
+      console.log('Tentando obter dados existentes...');
+      
+      try {
+        // Verificar se já existem usuários
+        const { data: existingUsers, error: queryError } = await supabase
+          .from('users')
+          .select('count')
+          .limit(1)
+          .single();
+          
+        if (queryError) {
+          console.error('Erro ao verificar usuários existentes:', queryError);
+          
+          if (queryError.message.includes('permission denied')) {
+            console.log('⚠️ Permissão negada para leitura. Verifique as políticas RLS do Supabase.');
+          }
+          
+          if (queryError.message.includes('does not exist')) {
+            console.log('⚠️ A tabela users não existe. É necessário criar no Console do Supabase.');
+            console.log('ℹ️ Acesse https://app.supabase.com e crie as tabelas manualmente.');
+            console.log('ℹ️ Use a estrutura definida em shared/schema.ts como referência.');
+          }
+        } else {
+          console.log('✅ Comunicação com o banco funcionando. Total de usuários:', existingUsers?.count || 0);
+        }
+      } catch (err) {
+        console.error('Erro ao verificar dados existentes:', err);
+      }
       
     } catch (error) {
       console.error('Erro ao inicializar banco de dados:', error);
@@ -739,14 +697,67 @@ export class SupabaseStorage implements IStorage {
   }
   
   async createUser(user: InsertUser): Promise<User> {
+    console.log('Tentando criar usuário:', user.username);
+    
+    // Converter camelCase para snake_case para o Supabase
+    const supabaseUser = {
+      username: user.username,
+      password: user.password,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role || 'user',  // valor padrão
+      profile_image: user.profileImage,
+      cpf: user.cpf,
+      address: user.address,
+      city: user.city,
+      state: user.state,
+      postal_code: user.postalCode,
+      neighborhood: user.neighborhood,
+      id_document_url: user.idDocumentUrl,
+      address_document_url: user.addressDocumentUrl,
+      latitude: user.latitude,
+      longitude: user.longitude
+    };
+    
     const { data, error } = await supabase
       .from('users')
-      .insert(user)
+      .insert(supabaseUser)
       .select()
       .single();
       
-    if (error) throw new Error(`Erro ao criar usuário: ${error.message}`);
-    return data as User;
+    if (error) {
+      console.error('Erro completo ao criar usuário:', error);
+      throw new Error(`Erro ao criar usuário: ${error.message}`);
+    }
+    
+    if (!data) {
+      throw new Error('Erro ao criar usuário: Resposta vazia do servidor');
+    }
+    
+    // Converter de volta do snake_case para camelCase
+    return {
+      ...data,
+      id: data.id,
+      username: data.username,
+      password: data.password,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      role: data.role,
+      profileImage: data.profile_image,
+      createdAt: data.created_at,
+      cpf: data.cpf,
+      address: data.address,
+      city: data.city,
+      state: data.state,
+      postalCode: data.postal_code,
+      neighborhood: data.neighborhood,
+      idDocumentUrl: data.id_document_url,
+      addressDocumentUrl: data.address_document_url,
+      latitude: data.latitude,
+      longitude: data.longitude
+    } as User;
   }
   
   async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
@@ -1047,4 +1058,5 @@ export class SupabaseStorage implements IStorage {
 }
 
 // Configura a implementação de armazenamento a ser utilizada
-export const storage = new SupabaseStorage();
+// Temporariamente usando o armazenamento em memória até resolver os problemas do Supabase
+export const storage = new MemStorage();
