@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,12 +13,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { driverRegistrationSchema } from "@shared/schema";
-import { Truck, Upload, ArrowLeft } from "lucide-react";
+import { Truck, Upload, ArrowLeft, File, X, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const DriverRegistration = () => {
   const [, navigate] = useLocation();
   const { user, registerDriverMutation } = useAuth();
+  const { toast } = useToast();
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Pre-fill form with user data if available
   const form = useForm<z.infer<typeof driverRegistrationSchema>>({
@@ -38,16 +43,93 @@ const DriverRegistration = () => {
     },
   });
   
-  const onSubmit = (data: z.infer<typeof driverRegistrationSchema>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+  
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  const onSubmit = async (data: z.infer<typeof driverRegistrationSchema>) => {
     if (!agreedToTerms) {
+      toast({
+        title: "Termos e condições",
+        description: "Você precisa aceitar os termos e condições para continuar.",
+        variant: "destructive"
+      });
       return;
     }
     
-    registerDriverMutation.mutate(data, {
-      onSuccess: () => {
-        navigate("/driver/dashboard");
-      }
-    });
+    if (uploadedFiles.length === 0) {
+      toast({
+        title: "Documentos necessários",
+        description: "Por favor, faça upload dos documentos necessários.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Simulando upload de arquivos
+      setIsUploading(true);
+      
+      // Simulando envio de arquivos para o servidor
+      const formData = new FormData();
+      uploadedFiles.forEach((file, index) => {
+        formData.append(`file${index}`, file);
+      });
+      
+      // Idealmente, você faria o upload real aqui:
+      // const uploadResponse = await fetch('/api/upload', { 
+      //   method: 'POST', 
+      //   body: formData 
+      // });
+      
+      // Simulando um delay para o upload dos arquivos
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Para fins de demonstração, consideraremos o upload bem-sucedido
+      // e procederemos com o registro do motorista
+      
+      // Modifique os dados para incluir quaisquer informações relevantes sobre os arquivos
+      const enhancedData = {
+        ...data,
+        // Se necessário, você poderia adicionar metadados sobre os arquivos aqui
+        // fileCount: uploadedFiles.length,
+        // fileNames: uploadedFiles.map(f => f.name).join(',')
+      };
+      
+      // Após o upload bem sucedido, envie os dados do motorista
+      registerDriverMutation.mutate(enhancedData, {
+        onSuccess: () => {
+          toast({
+            title: "Cadastro realizado com sucesso!",
+            description: "Você foi registrado como motorista.",
+            variant: "default"
+          });
+          navigate("/driver/dashboard");
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro no cadastro",
+            description: error.message || "Ocorreu um erro ao cadastrar seus dados.",
+            variant: "destructive"
+          });
+        }
+      });
+    } catch (error) {
+      toast({
+        title: "Erro no upload",
+        description: "Ocorreu um erro ao enviar seus documentos.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
   
   return (
@@ -279,12 +361,66 @@ const DriverRegistration = () => {
                     
                     <div className="border border-dashed border-gray-300 rounded-lg p-4">
                       <div className="flex flex-col items-center justify-center py-4">
-                        <Upload className="h-10 w-10 text-gray-400 mb-2" />
-                        <p className="text-sm font-medium mb-1">Arraste e solte ou clique para upload</p>
-                        <p className="text-xs text-gray-500">Foto da CNH, documentos do veículo e foto do veículo</p>
-                        <Button variant="outline" size="sm" className="mt-4">
-                          Selecionar Arquivos
-                        </Button>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          multiple
+                          onChange={handleFileChange}
+                          className="hidden"
+                          accept="image/*,.pdf"
+                        />
+                        {uploadedFiles.length === 0 ? (
+                          <>
+                            <Upload className="h-10 w-10 text-gray-400 mb-2" />
+                            <p className="text-sm font-medium mb-1">Arraste e solte ou clique para upload</p>
+                            <p className="text-xs text-gray-500">Foto da CNH, documentos do veículo e foto do veículo</p>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="mt-4"
+                              onClick={() => fileInputRef.current?.click()}
+                              type="button"
+                            >
+                              Selecionar Arquivos
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="w-full space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-medium">Arquivos selecionados</h4>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => fileInputRef.current?.click()}
+                                type="button"
+                              >
+                                Adicionar mais
+                              </Button>
+                            </div>
+                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                              {uploadedFiles.map((file, index) => (
+                                <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                  <div className="flex items-center space-x-2">
+                                    <File className="h-4 w-4 text-gray-500" />
+                                    <span className="text-sm truncate max-w-[200px]">{file.name}</span>
+                                    <span className="text-xs text-gray-500">
+                                      {(file.size / 1024).toFixed(1)} KB
+                                    </span>
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => removeFile(index)}
+                                    className="h-6 w-6 p-0"
+                                    type="button"
+                                  >
+                                    <X className="h-4 w-4 text-gray-500" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -311,9 +447,33 @@ const DriverRegistration = () => {
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={!agreedToTerms || registerDriverMutation.isPending}
+                    disabled={!agreedToTerms || registerDriverMutation.isPending || isUploading}
                   >
-                    {registerDriverMutation.isPending ? "Cadastrando..." : "Cadastrar como Motorista"}
+                    {registerDriverMutation.isPending || isUploading ? (
+                      <div className="flex items-center">
+                        <span className="animate-spin mr-2">
+                          <svg className="h-4 w-4" viewBox="0 0 24 24">
+                            <circle 
+                              className="opacity-25" 
+                              cx="12" 
+                              cy="12" 
+                              r="10" 
+                              stroke="currentColor" 
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path 
+                              className="opacity-75" 
+                              fill="currentColor" 
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                        </span>
+                        {isUploading ? "Enviando arquivos..." : "Cadastrando..."}
+                      </div>
+                    ) : (
+                      "Cadastrar como Motorista"
+                    )}
                   </Button>
                 </form>
               </Form>
