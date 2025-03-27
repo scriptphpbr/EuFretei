@@ -91,7 +91,7 @@ const Navbar = () => {
               <Truck className="h-8 w-8" />
             </span>
             <span className="font-bold text-xl text-gray-900">
-              Frete<span className="text-primary">Já</span>
+              Eu<span className="text-primary">Fretei</span>
             </span>
           </Link>
           

@@ -177,6 +177,25 @@ const UserDashboard = () => {
             </Card>
           </div>
           
+          {/* Become Driver Card */}
+          <div className="mb-8">
+            <Card className="bg-gradient-to-r from-orange-400 to-amber-500 text-white">
+              <CardContent className="p-6 flex flex-col md:flex-row justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold mb-2">Torne-se um Motorista Parceiro</h3>
+                  <p className="mb-4">Ganhe dinheiro extra usando seu veículo para realizar fretes na plataforma</p>
+                </div>
+                <Button 
+                  onClick={() => navigate("/partners")} 
+                  variant="secondary" 
+                  className="bg-white text-orange-500 hover:bg-orange-50"
+                >
+                  Seja Motorista
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+          
           {/* Tabs Section */}
           <div className="mb-6">
             <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab}>

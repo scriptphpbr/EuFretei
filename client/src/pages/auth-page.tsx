@@ -25,7 +25,7 @@ const AuthPage = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [user, navigate]);
 
@@ -56,7 +56,7 @@ const AuthPage = () => {
   const onLoginSubmit = (data: LoginData) => {
     loginMutation.mutate(data, {
       onSuccess: () => {
-        navigate("/");
+        navigate("/dashboard");
       },
     });
   };
@@ -65,7 +65,7 @@ const AuthPage = () => {
   const onRegisterSubmit = (data: z.infer<typeof userRegistrationSchema>) => {
     registerUserMutation.mutate(data, {
       onSuccess: () => {
-        navigate("/");
+        navigate("/dashboard");
       },
     });
   };
@@ -77,7 +77,7 @@ const AuthPage = () => {
         <div className="md:w-1/2 p-8">
           <div className="mb-6 flex items-center gap-2">
             <Truck className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">Frete<span className="text-primary">Já</span></span>
+            <span className="font-bold text-xl">Eu<span className="text-primary">Fretei</span></span>
           </div>
           
           <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
@@ -280,7 +280,7 @@ const AuthPage = () => {
         
         {/* Right side - Hero content */}
         <div className="md:w-1/2 bg-gradient-to-br from-primary to-green-700 text-white p-12 flex flex-col justify-center">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">FreteJá</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">EuFretei</h1>
           <p className="text-lg mb-6">
             A melhor plataforma para encontrar motoristas de frete e gerenciar suas entregas de forma prática e segura.
           </p>
