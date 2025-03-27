@@ -78,12 +78,17 @@ export const userRegistrationSchema = insertUserSchema.extend({
   path: ["confirmPassword"],
 });
 
-export const driverRegistrationSchema = userRegistrationSchema.extend({
+// Create a driver registration schema by merging user registration fields with driver fields
+export const driverRegistrationSchema = z.object({
+  ...userRegistrationSchema.shape,
   vehicleModel: z.string().min(2, "Vehicle model is required"),
   licensePlate: z.string().min(3, "License plate is required"),
   vehicleType: z.string().min(2, "Vehicle type is required"),
   location: z.string().min(2, "Location is required"),
   document: z.string().min(2, "Document is required"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 export const loginSchema = z.object({

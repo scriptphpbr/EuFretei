@@ -5,7 +5,7 @@ import HowItWorksCard from "@/components/how-it-works-card";
 import DriverCard from "@/components/driver-card";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Truck, Users, Search, FileText } from "lucide-react";
+import { Truck, Users, Search, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const HomePage = () => {

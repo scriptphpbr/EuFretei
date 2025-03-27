@@ -8,11 +8,8 @@ import DriverMobileMenu from "@/components/driver-mobile-menu";
 import PendingFreightCard from "@/components/pending-freight-card";
 import FreightCard from "@/components/freight-card";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { 
-  Button,
-  Card, 
-  CardContent
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { 
   Loader2, 
   Menu, 
