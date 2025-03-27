@@ -6,18 +6,93 @@ import HowItWorksCard from "@/components/how-it-works-card";
 import DriverCard from "@/components/driver-card";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Truck, Users, Search, FileText, Loader2 } from "lucide-react";
+import { Truck, Users, Search, FileText, Loader2, MapPin, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+
+// Definição do tipo de Driver para corresponder ao DriverCard props
+interface Driver {
+  id: number;
+  name: string;
+  profileImage: string;
+  averageRating: number;
+  totalRatings: number;
+  vehicleModel: string;
+  location: string;
+  isAvailable: boolean;
+}
 
 const HomePage = () => {
   const [location, navigate] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [searchRadius, setSearchRadius] = useState(3); // 3km por padrão
   
-  const { data: drivers, isLoading } = useQuery({
+  // Consulta para motoristas regulares (quando não há localização)
+  const { data: availableDrivers, isLoading: isLoadingAvailable } = useQuery<Driver[]>({
     queryKey: ["/api/drivers/available"],
-    enabled: true,
+    enabled: !userCoords,
   });
   
+  // Consulta para motoristas próximos (quando há localização)
+  const { data: nearbyDrivers, isLoading: isLoadingNearby } = useQuery<Driver[]>({
+    queryKey: ["/api/drivers/nearby", userCoords?.latitude, userCoords?.longitude, searchRadius],
+    enabled: !!userCoords,
+  });
+  
+  // Determinar quais motoristas exibir
+  const drivers: Driver[] = userCoords ? (nearbyDrivers || []) : (availableDrivers || []);
+  const isLoading = userCoords ? isLoadingNearby : isLoadingAvailable;
+  
+  const getUserLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocalização não é suportada pelo seu navegador");
+      toast({
+        title: "Erro de localização",
+        description: "Geolocalização não é suportada pelo seu navegador",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsLocating(true);
+    setLocationError(null);
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserCoords({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setIsLocating(false);
+        toast({
+          title: "Localização obtida",
+          description: "Mostrando motoristas próximos à sua localização",
+        });
+      },
+      (error) => {
+        console.error("Erro ao obter localização:", error);
+        setIsLocating(false);
+        setLocationError(
+          "Não foi possível obter sua localização. Por favor, verifique as permissões do seu navegador."
+        );
+        toast({
+          title: "Erro de localização",
+          description: "Não foi possível obter sua localização. Verifique as permissões do navegador.",
+          variant: "destructive",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -122,10 +197,16 @@ const HomePage = () => {
       {/* Drivers Section */}
       <section id="motoristas" className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-10">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6">
             <div>
-              <h2 className="text-3xl font-bold mb-2">Motoristas Disponíveis</h2>
-              <p className="text-gray-600">Encontre o motorista ideal para seu frete</p>
+              <h2 className="text-3xl font-bold mb-2">
+                {userCoords ? 'Motoristas Próximos' : 'Motoristas Disponíveis'}
+              </h2>
+              <p className="text-gray-600">
+                {userCoords 
+                  ? `Mostrando motoristas em um raio de ${searchRadius}km da sua localização`
+                  : 'Encontre o motorista ideal para seu frete'}
+              </p>
             </div>
             
             <div className="mt-4 md:mt-0">
@@ -142,27 +223,117 @@ const HomePage = () => {
             </div>
           </div>
           
+          {/* Botão de localização e controles */}
+          <div className="mb-6">
+            <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={getUserLocation}
+                    disabled={isLocating}
+                    className="flex items-center gap-2"
+                    variant={userCoords ? "outline" : "default"}
+                  >
+                    {isLocating ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <MapPin className="w-4 h-4 mr-2" />
+                    )}
+                    {userCoords 
+                      ? "Atualizar localização" 
+                      : "Usar minha localização"}
+                  </Button>
+                  
+                  {userCoords && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => setUserCoords(null)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      Mostrar todos
+                    </Button>
+                  )}
+                </div>
+                
+                {userCoords && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-600">Raio de busca:</span>
+                    <select
+                      value={searchRadius}
+                      onChange={(e) => setSearchRadius(Number(e.target.value))}
+                      className="rounded-md border border-gray-300 py-1 px-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                      <option value="1">1km</option>
+                      <option value="3">3km</option>
+                      <option value="5">5km</option>
+                      <option value="10">10km</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+              
+              {locationError && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Erro de localização</AlertTitle>
+                  <AlertDescription>{locationError}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
+          
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
           ) : (
             <>
-              <div className="grid md:grid-cols-2 gap-6">
-                {drivers && drivers.map((driver) => (
-                  <DriverCard key={driver.id} driver={driver} />
-                ))}
-              </div>
+              {drivers.length > 0 ? (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {drivers.map((driver: Driver) => (
+                    <DriverCard key={driver.id} driver={driver} />
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm p-8 text-center border border-gray-200">
+                  <div className="mx-auto mb-4 bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center">
+                    <Truck className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Nenhum motorista encontrado</h3>
+                  <p className="text-gray-600 mb-4">
+                    {userCoords 
+                      ? `Não encontramos motoristas disponíveis em um raio de ${searchRadius}km da sua localização.`
+                      : 'Não encontramos motoristas disponíveis no momento.'}
+                  </p>
+                  {userCoords && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSearchRadius(prev => Math.min(prev + 2, 10))}
+                      className="mr-2"
+                    >
+                      Aumentar raio de busca
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setUserCoords(null)}
+                  >
+                    Ver todos os motoristas
+                  </Button>
+                </div>
+              )}
               
-              <div className="text-center mt-10">
-                <Button
-                  variant="outline"
-                  className="inline-flex items-center justify-center gap-2 border border-primary text-primary hover:bg-primary hover:text-white px-6 py-3 rounded-lg transition shadow-sm font-medium"
-                  onClick={() => navigate("/drivers")}
-                >
-                  Ver mais motoristas
-                </Button>
-              </div>
+              {drivers.length > 0 && (
+                <div className="text-center mt-10">
+                  <Button
+                    variant="outline"
+                    className="inline-flex items-center justify-center gap-2 border border-primary text-primary hover:bg-primary hover:text-white px-6 py-3 rounded-lg transition shadow-sm font-medium"
+                    onClick={() => navigate("/drivers")}
+                  >
+                    Ver mais motoristas
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </div>

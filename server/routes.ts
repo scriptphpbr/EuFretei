@@ -5,7 +5,8 @@ import { setupAuth } from "./auth";
 import { 
   insertDriverSchema, 
   insertFreightSchema, 
-  insertRatingSchema 
+  insertRatingSchema,
+  profileUpdateSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -512,6 +513,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user dashboard:", error);
       res.status(500).json({ message: "Failed to fetch dashboard data" });
+    }
+  });
+
+  // User Profile API
+  app.get("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      const userProfile = await storage.getUserProfile(req.user!.id);
+      if (!userProfile) {
+        return res.status(404).json({ message: "User profile not found" });
+      }
+      
+      // Omit sensitive information like password
+      const { password, ...userProfileData } = userProfile;
+      
+      res.json(userProfileData);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ message: "Failed to fetch user profile" });
+    }
+  });
+  
+  app.patch("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      // Validate profile data
+      const profileData = profileUpdateSchema.parse(req.body);
+      
+      // Update the user profile
+      const updatedProfile = await storage.updateUserProfile(req.user!.id, profileData);
+      
+      if (!updatedProfile) {
+        return res.status(404).json({ message: "User profile not found" });
+      }
+      
+      // Omit sensitive information like password
+      const { password, ...updatedProfileData } = updatedProfile;
+      
+      res.json(updatedProfileData);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Failed to update user profile" });
+    }
+  });
+  
+  // Driver Location API - Motoristas próximos ao CEP
+  app.get("/api/drivers/nearby", requireAuth, async (req, res) => {
+    try {
+      const { latitude, longitude, radius = 3 } = req.query;
+      
+      if (!latitude || !longitude) {
+        return res.status(400).json({ message: "Latitude and longitude are required" });
+      }
+      
+      const nearbyDrivers = await storage.getNearbyDrivers(
+        parseFloat(latitude as string), 
+        parseFloat(longitude as string), 
+        parseFloat(radius as string)
+      );
+      
+      // Fetch user data for each driver to get names, profile images, etc.
+      const driversWithUserInfo = await Promise.all(
+        nearbyDrivers.map(async (driver) => {
+          const user = await storage.getUser(driver.userId);
+          if (!user) return null;
+          
+          return {
+            ...driver,
+            name: user.name,
+            profileImage: user.profileImage,
+            phone: user.phone,
+            email: user.email
+          };
+        })
+      );
+      
+      // Filter out any null entries
+      const validDrivers = driversWithUserInfo.filter(driver => driver !== null);
+      
+      res.json(validDrivers);
+    } catch (error) {
+      console.error("Error fetching nearby drivers:", error);
+      res.status(500).json({ message: "Failed to fetch nearby drivers" });
     }
   });
 

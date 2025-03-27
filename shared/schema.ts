@@ -13,6 +13,18 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("user"), // "user" or "driver"
   profileImage: text("profile_image"),
   createdAt: timestamp("created_at").defaultNow(),
+  
+  // Campos adicionais para o perfil do usuário
+  cpf: text("cpf"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  postalCode: text("postal_code"),
+  neighborhood: text("neighborhood"),
+  idDocumentUrl: text("id_document_url"),
+  addressDocumentUrl: text("address_document_url"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
 });
 
 // Driver table - extends user with driver-specific information
@@ -103,6 +115,21 @@ export const ratingSubmissionSchema = z.object({
   comment: z.string().optional(),
 });
 
+// Schema para atualização de perfil do usuário
+export const profileUpdateSchema = z.object({
+  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres").optional(),
+  email: z.string().email("Email inválido").optional(),
+  phone: z.string().min(10, "Telefone inválido").optional(),
+  cpf: z.string().min(11, "CPF inválido").max(14, "CPF inválido").optional(),
+  address: z.string().min(5, "Endereço deve ter pelo menos 5 caracteres").optional(),
+  city: z.string().min(2, "Cidade é obrigatória").optional(),
+  state: z.string().min(2, "Estado é obrigatório").optional(),
+  postalCode: z.string().min(8, "CEP inválido").max(9, "CEP inválido").optional(),
+  neighborhood: z.string().min(2, "Bairro é obrigatório").optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+});
+
 // Type definitions
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -120,3 +147,4 @@ export type InsertRating = z.infer<typeof insertRatingSchema>;
 
 export type LoginData = z.infer<typeof loginSchema>;
 export type RatingSubmission = z.infer<typeof ratingSubmissionSchema>;
+export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;

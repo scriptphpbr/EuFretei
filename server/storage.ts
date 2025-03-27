@@ -12,6 +12,8 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
+  getUserProfile(id: number): Promise<User | undefined>; // Novo método para obter perfil do usuário
+  updateUserProfile(id: number, profileData: Partial<User>): Promise<User | undefined>; // Novo método para atualizar perfil
   
   // Driver methods
   getDriver(id: number): Promise<Driver | undefined>;
@@ -21,6 +23,7 @@ export interface IStorage {
   createDriver(driver: InsertDriver): Promise<Driver>;
   updateDriver(id: number, driver: Partial<Driver>): Promise<Driver | undefined>;
   updateDriverBalance(id: number, amount: number): Promise<Driver | undefined>;
+  getNearbyDrivers(latitude: number, longitude: number, radius: number): Promise<Driver[]>; // Novo método para encontrar motoristas próximos
   
   // Freight methods
   getFreight(id: number): Promise<Freight | undefined>;
@@ -152,6 +155,25 @@ export class MemStorage implements IStorage {
     };
     this.drivers.set(id, updatedDriver);
     return updatedDriver;
+  }
+  
+  async getNearbyDrivers(latitude: number, longitude: number, radius: number): Promise<Driver[]> {
+    // Implementação simples: retorna todos os motoristas disponíveis
+    // Em um cenário real, filtraríamos com base na distância entre as coordenadas
+    const availableDrivers = await this.getAvailableDrivers();
+    
+    return availableDrivers;
+    
+    // Nota: Em uma implementação real, calcularíamos a distância entre as coordenadas
+    // usando a fórmula de Haversine e filtraríamos os motoristas que estão dentro do raio especificado
+  }
+  
+  async getUserProfile(id: number): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+  
+  async updateUserProfile(id: number, profileData: Partial<User>): Promise<User | undefined> {
+    return this.updateUser(id, profileData);
   }
 
   // Freight methods
