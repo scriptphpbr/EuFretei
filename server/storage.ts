@@ -9,7 +9,7 @@ dotenv.config();
 
 // Configuração do Supabase
 const supabaseUrl = 'https://gzjyywhnpmujsxdtypkl.supabase.co';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6anl5d2hucG11anN4ZHR5cGtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxMDYyNTcsImV4cCI6MjA1ODY4MjI1N30.hZrX853qzx7VI61LhekH_xuPUeKamRdn1G4HEK24ns0';
 console.log("Utilizando Supabase URL:", supabaseUrl);
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -373,11 +373,159 @@ export class SupabaseStorage implements IStorage {
   
   private async initializeDatabase() {
     try {
-      // Verificar se as tabelas necessárias existem, se não existirem, serão criadas
-      // automaticamente pelo Supabase quando usarmos os métodos insert/update
       console.log('Inicializando conexão com Supabase...');
+      
+      // Verificar se as tabelas existem consultando os dados
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id')
+        .limit(1);
+      
+      if (usersError) {
+        console.log('Erro ao verificar tabela users - a tabela pode não existir ou há problema na conexão:', usersError.message);
+      } else {
+        console.log('Tabela users existe no Supabase.');
+      }
+      
+      const { data: driversData, error: driversError } = await supabase
+        .from('drivers')
+        .select('id')
+        .limit(1);
+      
+      if (driversError) {
+        console.log('Erro ao verificar tabela drivers - a tabela pode não existir ou há problema na conexão:', driversError.message);
+      } else {
+        console.log('Tabela drivers existe no Supabase.');
+      }
+      
+      const { data: freightsData, error: freightsError } = await supabase
+        .from('freights')
+        .select('id')
+        .limit(1);
+      
+      if (freightsError) {
+        console.log('Erro ao verificar tabela freights - a tabela pode não existir ou há problema na conexão:', freightsError.message);
+      } else {
+        console.log('Tabela freights existe no Supabase.');
+      }
+      
+      const { data: ratingsData, error: ratingsError } = await supabase
+        .from('ratings')
+        .select('id')
+        .limit(1);
+      
+      if (ratingsError) {
+        console.log('Erro ao verificar tabela ratings - a tabela pode não existir ou há problema na conexão:', ratingsError.message);
+      } else {
+        console.log('Tabela ratings existe no Supabase.');
+      }
+      
+      // Criar usuário e motorista de exemplo para teste
+      await this.seedInitialDataIfNeeded();
+      
     } catch (error) {
       console.error('Erro ao inicializar banco de dados:', error);
+    }
+  }
+  
+  private async seedInitialDataIfNeeded() {
+    try {
+      // Verificar se já existem dados no Supabase
+      const { data: existingUsers, error: userQueryError } = await supabase
+        .from('users')
+        .select('id')
+        .limit(1);
+        
+      if (userQueryError) {
+        console.error('Erro ao verificar dados existentes:', userQueryError);
+        return;
+      }
+      
+      // Se já existem dados, não precisamos semear
+      if (existingUsers && existingUsers.length > 0) {
+        console.log('Dados já existem, pulando semeadura inicial.');
+        return;
+      }
+      
+      console.log('Semeando dados iniciais no Supabase...');
+      
+      // Criar alguns usuários de teste
+      const driverPassword = 'password'; // Em produção seria criptografado
+      
+      // Criar motorista 1
+      const { data: user1, error: user1Error } = await supabase
+        .from('users')
+        .insert({
+          username: "driver1",
+          password: driverPassword,
+          name: "João Silva",
+          email: "joao.silva@example.com",
+          phone: "(11) 98765-4321",
+          role: "driver",
+          profile_image: "https://images.unsplash.com/photo-1531384441138-2736e62e0919"
+        })
+        .select()
+        .single();
+        
+      if (user1Error) {
+        console.error('Erro ao criar usuário 1:', user1Error);
+      } else if (user1) {
+        const { error: driver1Error } = await supabase
+          .from('drivers')
+          .insert({
+            user_id: user1.id,
+            vehicle_model: "Fiorino Furgão 2020",
+            license_plate: "ABC1234",
+            vehicle_type: "Small Van",
+            location: "São Paulo, SP",
+            is_available: true,
+            document: "123456789"
+          });
+          
+        if (driver1Error) {
+          console.error('Erro ao criar motorista 1:', driver1Error);
+        }
+      }
+      
+      // Criar motorista 2
+      const { data: user2, error: user2Error } = await supabase
+        .from('users')
+        .insert({
+          username: "driver2",
+          password: driverPassword,
+          name: "Carlos Oliveira",
+          email: "carlos.oliveira@example.com",
+          phone: "(21) 98765-4321",
+          role: "driver",
+          profile_image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d"
+        })
+        .select()
+        .single();
+        
+      if (user2Error) {
+        console.error('Erro ao criar usuário 2:', user2Error);
+      } else if (user2) {
+        const { error: driver2Error } = await supabase
+          .from('drivers')
+          .insert({
+            user_id: user2.id,
+            vehicle_model: "VW Delivery 9.170",
+            license_plate: "DEF5678",
+            vehicle_type: "Truck",
+            location: "Rio de Janeiro, RJ",
+            is_available: true,
+            document: "987654321"
+          });
+          
+        if (driver2Error) {
+          console.error('Erro ao criar motorista 2:', driver2Error);
+        }
+      }
+      
+      console.log('Dados iniciais semeados com sucesso!');
+      
+    } catch (error) {
+      console.error('Erro ao semear dados iniciais:', error);
     }
   }
   
@@ -444,18 +592,39 @@ export class SupabaseStorage implements IStorage {
       .single();
       
     if (error || !data) return undefined;
-    return data as Driver;
+    
+    // Convertendo snake_case para camelCase
+    return {
+      ...data,
+      userId: data.user_id,
+      vehicleModel: data.vehicle_model,
+      licensePlate: data.license_plate,
+      vehicleType: data.vehicle_type,
+      isAvailable: data.is_available,
+      averageRating: data.average_rating,
+      totalRatings: data.total_ratings
+    } as Driver;
   }
   
   async getDriverByUserId(userId: number): Promise<Driver | undefined> {
     const { data, error } = await supabase
       .from('drivers')
       .select('*')
-      .eq('userId', userId)
+      .eq('user_id', userId)
       .single();
       
     if (error || !data) return undefined;
-    return data as Driver;
+    // Convertendo snake_case para camelCase
+    return {
+      ...data,
+      userId: data.user_id,
+      vehicleModel: data.vehicle_model,
+      licensePlate: data.license_plate,
+      vehicleType: data.vehicle_type,
+      isAvailable: data.is_available,
+      averageRating: data.average_rating,
+      totalRatings: data.total_ratings
+    } as Driver;
   }
   
   async getAllDrivers(): Promise<Driver[]> {
@@ -464,33 +633,73 @@ export class SupabaseStorage implements IStorage {
       .select('*');
       
     if (error || !data) return [];
-    return data as Driver[];
+    
+    // Convertendo snake_case para camelCase para todos os motoristas
+    return data.map(driver => ({
+      ...driver,
+      userId: driver.user_id,
+      vehicleModel: driver.vehicle_model,
+      licensePlate: driver.license_plate,
+      vehicleType: driver.vehicle_type,
+      isAvailable: driver.is_available,
+      averageRating: driver.average_rating,
+      totalRatings: driver.total_ratings
+    })) as Driver[];
   }
   
   async getAvailableDrivers(): Promise<Driver[]> {
     const { data, error } = await supabase
       .from('drivers')
       .select('*')
-      .eq('isAvailable', true);
+      .eq('is_available', true);
       
     if (error || !data) return [];
-    return data as Driver[];
+    
+    // Convertendo snake_case para camelCase para todos os motoristas
+    return data.map(driver => ({
+      ...driver,
+      userId: driver.user_id,
+      vehicleModel: driver.vehicle_model,
+      licensePlate: driver.license_plate,
+      vehicleType: driver.vehicle_type,
+      isAvailable: driver.is_available,
+      averageRating: driver.average_rating,
+      totalRatings: driver.total_ratings
+    })) as Driver[];
   }
   
   async createDriver(driver: InsertDriver): Promise<Driver> {
+    // Convertendo camelCase para snake_case para inserção no Supabase
     const { data, error } = await supabase
       .from('drivers')
       .insert({
-        ...driver,
-        averageRating: 0,
-        totalRatings: 0,
+        user_id: driver.userId,
+        vehicle_model: driver.vehicleModel,
+        license_plate: driver.licensePlate,
+        vehicle_type: driver.vehicleType,
+        location: driver.location,
+        is_available: driver.isAvailable ?? true,
+        document: driver.document,
+        average_rating: 0,
+        total_ratings: 0,
         balance: 0
       })
       .select()
       .single();
       
     if (error) throw new Error(`Erro ao criar motorista: ${error.message}`);
-    return data as Driver;
+    
+    // Convertendo de volta para camelCase para a aplicação
+    return {
+      ...data,
+      userId: data.user_id,
+      vehicleModel: data.vehicle_model,
+      licensePlate: data.license_plate,
+      vehicleType: data.vehicle_type,
+      isAvailable: data.is_available,
+      averageRating: data.average_rating,
+      totalRatings: data.total_ratings
+    } as Driver;
   }
   
   async updateDriver(id: number, driverData: Partial<Driver>): Promise<Driver | undefined> {
