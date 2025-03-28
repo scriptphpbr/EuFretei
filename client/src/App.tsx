@@ -17,6 +17,7 @@ import DriverPlans from "@/pages/driver-plans";
 import DriverDetail from "@/pages/driver-detail";
 import FreightRequest from "@/pages/freight-request";
 import Payment from "@/pages/payment";
+import AdminDashboard from "@/pages/admin-dashboard";
 import { AuthProvider } from "./hooks/use-auth";
 
 function Router() {
@@ -29,12 +30,13 @@ function Router() {
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/partners" component={PartnersPage} />
       <ProtectedRoute path="/dashboard" component={UserDashboard} />
-      <ProtectedRoute path="/driver/dashboard" component={DriverDashboard} />
+      <ProtectedRoute path="/driver/dashboard" component={DriverDashboard} requiredRole="driver" />
       <ProtectedRoute path="/driver/register" component={DriverRegistration} />
       <ProtectedRoute path="/driver/plans" component={DriverPlans} />
       <ProtectedRoute path="/driver/:id" component={DriverDetail} />
       <ProtectedRoute path="/freight/request/:driverId" component={FreightRequest} />
       <ProtectedRoute path="/freight/payment/:freightId" component={Payment} />
+      <ProtectedRoute path="/admin-dashboard" component={AdminDashboard} requiredRole="admin" />
       <Route component={NotFound} />
     </Switch>
   );
