@@ -545,8 +545,8 @@ export class MemStorage implements IStorage {
     // Create admin user with pre-hashed password
     // A senha "admin123" já pré-hashada para evitar problemas de autenticação
     const adminUser = await this.createUser({
-      username: "admin",
-      password: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824.9d7ed06e95a166f5338856a77e102dae",
+      username: "newadmin",
+      password: "c88eb32b743e3aa21b6cfd2d0e19ebdb18d2dc0436c58d40479e2b628a748de9ad75ec0817575b89866ee87f43fcb057c05c59898d9cbd49bd2ddc7f49482c6c.70477b5ed0f749fdf57354aa5f359494",
       name: "Administrador",
       email: "admin@eufretei.com.br",
       phone: "(11) 99999-9999",
